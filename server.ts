@@ -180,6 +180,25 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
+app.delete('/api/issues/:id', async (req, res) => {
+  try {
+    const db = getDbPool();
+    if (db) {
+      const issueId = req.params.id;
+      const [result] = await db.execute('DELETE FROM issues WHERE id = ?', [issueId]) as any;
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, error: 'Issue not found' });
+      }
+      res.json({ success: true, message: 'Issue deleted successfully' });
+    } else {
+      res.status(503).json({ success: false, error: 'Database connection not available.' });
+    }
+  } catch (error) {
+    console.error("Error deleting issue:", error);
+    res.status(500).json({ success: false, error: "Failed to delete issue" });
+  }
+});
+
 // Setup Vite middleware for development or serve static files in production
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

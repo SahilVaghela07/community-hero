@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar } from 'lucide-react';
+import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2 } from 'lucide-react';
 
 interface Issue {
   id: number;
@@ -74,6 +74,22 @@ export default function App() {
       setDashboardError('Database cannot be reached or is not configured.');
     } finally {
       setDashboardLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this issue?')) {
+      try {
+        const response = await axios.delete(`/api/issues/${id}`);
+        if (response.data.success) {
+          setIssues(prevIssues => prevIssues.filter(issue => issue.id !== id));
+        } else {
+          alert('Failed to delete issue.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while deleting the issue.');
+      }
     }
   };
 
@@ -341,9 +357,18 @@ export default function App() {
                   <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${severityColor(issue.severity)}`}>
                     {issue.severity} Severity
                   </div>
-                  <div className="text-xs text-slate-500 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(issue.created_at).toLocaleDateString()}
+                  <div className="flex items-center gap-3">
+                    <div className="text-xs text-slate-500 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(issue.created_at).toLocaleDateString()}
+                    </div>
+                    <button 
+                      onClick={() => handleDelete(issue.id)}
+                      className="text-slate-500 hover:text-red-400 p-1 rounded-md hover:bg-slate-800 transition-colors"
+                      title="Delete Issue"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
                 

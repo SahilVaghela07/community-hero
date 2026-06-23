@@ -165,6 +165,21 @@ app.post('/api/issues', upload.single('image'), async (req, res) => {
 });
 
 
+app.get('/api/issues', async (req, res) => {
+  try {
+    const db = getDbPool();
+    if (db) {
+      const [rows] = await db.query('SELECT * FROM issues ORDER BY created_at DESC');
+      res.json({ success: true, data: rows });
+    } else {
+      res.status(503).json({ success: false, error: 'Database connection not available.' });
+    }
+  } catch (error) {
+    console.error("Error fetching issues:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch issues" });
+  }
+});
+
 // Setup Vite middleware for development or serve static files in production
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

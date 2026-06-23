@@ -6,10 +6,14 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
 const app = express();
+app.use(express.json());
+const JWT_SECRET = process.env.JWT_SECRET || 'secret-for-dev-fallback';
 const PORT = 3000;
 
 // Configure multer for file uploads (in-memory buffer)
@@ -50,10 +54,18 @@ async function initDb() {
         CREATE TABLE IF NOT EXISTS users (
           id INT AUTO_INCREMENT PRIMARY KEY,
           name VARCHAR(100),
+          email VARCHAR(255) UNIQUE,
+          password_hash VARCHAR(255),
+          role VARCHAR(20) DEFAULT 'public',
           points_balance INT DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
+      try {
+        await db.query('ALTER TABLE users ADD COLUMN email VARCHAR(255) UNIQUE, ADD COLUMN password_hash VARCHAR(255), ADD COLUMN role VARCHAR(20) DEFAULT "citizen"');
+      } catch (e) {
+        // Ignored if already exists
+      }
       await db.query(`
         CREATE TABLE IF NOT EXISTS issues (
           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,9 +74,24 @@ async function initDb() {
           description TEXT,
           latitude DECIMAL(10, 8),
           longitude DECIMAL(11, 8),
+          photo_url VARCHAR(255),
+          upvote_count INT DEFAULT 0,
           status VARCHAR(50) DEFAULT 'Pending',
           reporter_id INT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      try {
+        await db.query('ALTER TABLE issues ADD COLUMN photo_url VARCHAR(255), ADD COLUMN upvote_count INT DEFAULT 0');
+      } catch (e) {
+        // Ignored if already exists
+      }
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS upvotes (
+          user_id INT,
+          issue_id INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (user_id, issue_id)
         );
       `);
       // Seed a default test user
@@ -77,10 +104,123 @@ async function initDb() {
 }
 initDb();
 
-app.post('/api/issues', upload.single('image'), async (req, res) => {
+// RBAC Middleware
+function authorizeRole(role: string) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { id: number, role: string };
+      // Assign to req for later use
+      (req as any).user = decoded;
+      
+      if (decoded.role !== role) {
+        return res.status(403).json({ error: 'Access Denied: Insufficient permissions' });
+      }
+      next();
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+  };
+}
+
+// Optional Auth Middleware for endpoints that don't enforce a role but need user data
+function authenticateToken(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return next(); // Not logged in
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number, role: string };
+    (req as any).user = decoded;
+  } catch (err) {}
+  next();
+}
+
+app.post(['/api/auth/signup', '/api/signup'], async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Name, email, and password are required' });
+    }
+    const db = getDbPool();
+    if (!db) return res.status(503).json({ error: 'Database unavailable' });
+
+    const finalRole = role === 'admin' ? 'admin' : 'citizen';
+
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    try {
+      const [result] = await db.execute(
+        'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
+        [name, email, passwordHash, finalRole]
+      ) as any;
+      res.status(201).json({ success: true, message: 'User created successfully' });
+    } catch (dbErr: any) {
+      if (dbErr.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Email already exists' });
+      }
+      throw dbErr;
+    }
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post(['/api/auth/login', '/api/login'], async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const db = getDbPool();
+    if (!db) return res.status(503).json({ error: 'Database unavailable' });
+
+    const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]) as any;
+    const user = rows[0];
+
+    // Generic error message for security
+    const authFailedMessage = 'Invalid email or password';
+
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ error: authFailedMessage });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role, email: user.email }, 
+      JWT_SECRET, 
+      { expiresIn: '12h' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        points: user.points_balance
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/issues', authenticateToken, upload.single('image'), async (req, res) => {
   try {
     const file = req.file;
     const { latitude, longitude } = req.body;
+    const userId = (req as any).user?.id || null;
 
     if (!file) {
       return res.status(400).json({ error: 'Image file is required.' });
@@ -145,18 +285,19 @@ app.post('/api/issues', upload.single('image'), async (req, res) => {
 
     // Insert into MySQL if available
     const db = getDbPool();
+    let photoUrl = 'https://placehold.co/400x300?text=' + encodeURIComponent(aiResult.category || 'Issue');
     if (db) {
       try {
-        // We mock reporter_id = 1 for the logged in user
         await db.execute(
-          'INSERT INTO issues (category, severity, description, latitude, longitude, reporter_id) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO issues (category, severity, description, latitude, longitude, reporter_id, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
           [
             aiResult.category, 
             aiResult.severity, 
             aiResult.description, 
             latitude ? parseFloat(latitude) : null, 
             longitude ? parseFloat(longitude) : null,
-            1
+            userId,
+            photoUrl
           ]
         );
       } catch (dbError) {
@@ -169,7 +310,7 @@ app.post('/api/issues', upload.single('image'), async (req, res) => {
 
     res.json({
       success: true,
-      data: aiResult
+      data: { ...aiResult, photo_url: photoUrl }
     });
 
   } catch (error) {
@@ -178,6 +319,51 @@ app.post('/api/issues', upload.single('image'), async (req, res) => {
   }
 });
 
+app.post('/api/issues/:id/upvote', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const issueId = req.params.id;
+    const db = getDbPool();
+    if (!db) return res.status(503).json({ error: 'Database unavailable' });
+
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      try {
+        await connection.execute(
+          'INSERT INTO upvotes (user_id, issue_id) VALUES (?, ?)',
+          [userId, issueId]
+        );
+      } catch (err: any) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({ error: 'You have already upvoted this issue.' });
+        }
+        throw err;
+      }
+
+      await connection.execute(
+        'UPDATE issues SET upvote_count = upvote_count + 1 WHERE id = ?',
+        [issueId]
+      );
+
+      await connection.commit();
+      connection.release();
+      res.json({ success: true, message: 'Upvoted successfully!' });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      throw err;
+    }
+  } catch (error) {
+    console.error('Error upvoting issue:', error);
+    res.status(500).json({ error: 'Failed to upvote' });
+  }
+});
 
 app.get('/api/issues', async (req, res) => {
   try {
@@ -194,7 +380,7 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
-app.delete('/api/issues/:id', async (req, res) => {
+app.delete('/api/issues/:id', authorizeRole('admin'), async (req, res) => {
   try {
     const db = getDbPool();
     if (db) {
@@ -213,30 +399,20 @@ app.delete('/api/issues/:id', async (req, res) => {
   }
 });
 
-app.patch('/api/issues/:id/status', async (req, res) => {
+app.patch('/api/issues/:id/status', authorizeRole('admin'), async (req, res) => {
   try {
     const db = getDbPool();
     if (db) {
       const issueId = req.params.id;
-      // using body parser
-      let data = '';
-      req.on('data', chunk => { data += chunk.toString(); });
-      req.on('end', async () => {
-        try {
-          const body = JSON.parse(data || '{}');
-          const status = body.status;
-          if (!status) {
-            return res.status(400).json({ success: false, error: 'Status is required' });
-          }
-          const [result] = await db.execute('UPDATE issues SET status = ? WHERE id = ?', [status, issueId]) as any;
-          if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, error: 'Issue not found' });
-          }
-          res.json({ success: true, message: 'Issue status updated', status });
-        } catch (e) {
-            res.status(400).json({ success: false, error: 'Invalid JSON body' });
-        }
-      });
+      const status = req.body.status;
+      if (!status) {
+        return res.status(400).json({ success: false, error: 'Status is required' });
+      }
+      const [result] = await db.execute('UPDATE issues SET status = ? WHERE id = ?', [status, issueId]) as any;
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, error: 'Issue not found' });
+      }
+      res.json({ success: true, message: 'Issue status updated', status });
     } else {
       res.status(503).json({ success: false, error: 'Database connection not available.' });
     }
@@ -246,13 +422,16 @@ app.patch('/api/issues/:id/status', async (req, res) => {
   }
 });
 
-app.get('/api/users/me', async (req, res) => {
+app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
+    const userPayload = (req as any).user;
+    if (!userPayload) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
     const db = getDbPool();
     if (db) {
-      // Mock authenticated user is id 1
-      const userId = 1;
-      const [users] = await db.execute('SELECT id, name, points_balance FROM users WHERE id = ?', [userId]) as any;
+      const userId = userPayload.id;
+      const [users] = await db.execute('SELECT id, name, email, role, points_balance FROM users WHERE id = ?', [userId]) as any;
       if (users.length > 0) {
         res.json({ success: true, data: users[0] });
       } else {
@@ -266,7 +445,7 @@ app.get('/api/users/me', async (req, res) => {
   }
 });
 
-app.patch('/api/issues/:id/resolve', async (req, res) => {
+app.patch('/api/issues/:id/resolve', authorizeRole('admin'), async (req, res) => {
   try {
     const db = getDbPool();
     if (!db) {

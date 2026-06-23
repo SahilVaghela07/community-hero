@@ -8,7 +8,15 @@ declare global {
   }
 }
 import axios from 'axios';
-import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2, CheckCircle2, Circle, User } from 'lucide-react';
+import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2, CheckCircle2, Circle, User, ShieldAlert, LogIn, ArrowUpCircle } from 'lucide-react';
+
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 interface Issue {
   id: number;
@@ -17,6 +25,8 @@ interface Issue {
   description: string;
   latitude: number | null;
   longitude: number | null;
+  photo_url?: string;
+  upvote_count?: number;
   status: string;
   created_at: string;
 }
@@ -24,18 +34,52 @@ interface Issue {
 interface UserProfile {
   id: number;
   name: string;
+  email: string;
+  role: string;
   points_balance: number;
 }
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<'report' | 'dashboard' | 'profile'>('report');
-  const [isAdmin, setIsAdmin] = useState(true); // Toggle for Authority/Admin view
-  
+const ProtectedRoute = ({ user, roleRequired, children }: { user: UserProfile | null, roleRequired?: string, children: React.ReactNode }) => {
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center animate-in fade-in duration-500">
+        <ShieldAlert className="w-16 h-16 text-blue-500/50 mb-6" />
+        <h2 className="text-2xl font-semibold text-white mb-2">Authentication Required</h2>
+        <p className="text-slate-400">Please sign in to access this page.</p>
+      </div>
+    );
+  }
+
+  if (roleRequired && user.role !== roleRequired) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center animate-in fade-in duration-500">
+        <ShieldAlert className="w-16 h-16 text-rose-500/50 mb-6" />
+        <h2 className="text-2xl font-semibold text-white mb-2">Access Denied</h2>
+        <p className="text-slate-400">You do not have the necessary permissions.</p>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+import { Login } from './auth/Login';
+import { Register } from './auth/Register';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+
+function MainApp() {
+  const { user: currentUser, logout, isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState<'report' | 'dashboard' | 'profile'>('dashboard');
+
   // Profile State
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  // Report Form State
+  const handleLogout = () => {
+    logout();
+  };
+
+  const isAdmin = currentUser?.role === 'admin';
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,7 +98,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<'Pending' | 'Resolved' | 'All'>('Pending');
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'most-upvotes'>('most-upvotes');
   const categories = ['All', 'Pothole', 'Streetlight', 'Leak', 'Garbage', 'Other'];
   const severities = ['All', 'High', 'Medium', 'Low'];
 
@@ -91,8 +135,8 @@ export default function App() {
       if (response.data.success) {
         setUserProfile(response.data.data);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.response?.status !== 401) console.error(err);
     } finally {
       setProfileLoading(false);
     }
@@ -108,8 +152,8 @@ export default function App() {
       } else {
         setDashboardError('Failed to fetch issues.');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.response?.status !== 401) console.error(err);
       setDashboardError('Database cannot be reached or is not configured.');
     } finally {
       setDashboardLoading(false);
@@ -125,10 +169,19 @@ export default function App() {
         } else {
           alert('Failed to delete issue.');
         }
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err.response?.status !== 401) console.error(err);
         alert('An error occurred while deleting the issue.');
       }
+    }
+  };
+
+  const handleUpvote = async (id: number) => {
+    try {
+      await axios.post(`/api/issues/${id}/upvote`);
+      fetchIssues();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to upvote');
     }
   };
 
@@ -144,7 +197,7 @@ export default function App() {
         alert(response.data.error || 'Failed to update status.');
       }
     } catch (err: any) {
-      console.error(err);
+      if (err.response?.status !== 401) console.error(err);
       alert(err.response?.data?.error || 'An error occurred while resolving the issue.');
     }
   };
@@ -201,8 +254,8 @@ export default function App() {
       } else {
         setError('Server returned an error.');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.response?.status !== 401) console.error(err);
       setError('Failed to submit report. Please try again.');
     } finally {
       setLoading(false);
@@ -221,7 +274,8 @@ export default function App() {
   const renderActiveView = () => {
     if (activeTab === 'report') {
       return (
-        <div className="w-full max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <ProtectedRoute user={currentUser}>
+          <div className="w-full max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
           {/* Upload Card */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
             <h2 className="text-xl font-medium text-white mb-6 flex items-center gap-2">
@@ -330,70 +384,83 @@ export default function App() {
             </div>
           )}
         </div>
+        </ProtectedRoute>
       );
     }
 
     if (activeTab === 'profile') {
       return (
-        <div className="w-full max-w-md mx-auto space-y-8 animate-in fade-in duration-500 mt-8">
-          <h2 className="text-2xl font-semibold text-white flex items-center gap-2 mb-6">
-            <User className="w-6 h-6 text-blue-400" />
-            My Profile
-          </h2>
-          
-          {profileLoading ? (
-            <div className="flex justify-center py-20 text-slate-500">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
-          ) : userProfile ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
-              <div className="w-24 h-24 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-lg mb-6">
-                {userProfile.name.charAt(0)}
+        <ProtectedRoute user={currentUser}>
+          <div className="w-full max-w-md mx-auto space-y-8 animate-in fade-in duration-500 mt-8">
+            <h2 className="text-2xl font-semibold text-white flex items-center gap-2 mb-6">
+              <User className="w-6 h-6 text-blue-400" />
+              My Profile
+            </h2>
+            
+            {profileLoading ? (
+              <div className="flex justify-center py-20 text-slate-500">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-1">{userProfile.name}</h3>
-              <p className="text-slate-400 mb-8 font-medium">Community Contributor</p>
-              
-              <div className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Points Wallet</p>
-                <div className="flex items-center justify-center gap-3">
-                  <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-xl">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 tracking-tighter">
-                    {userProfile.points_balance}
-                  </span>
+            ) : userProfile ? (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
+                <div className="w-24 h-24 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-lg mb-6">
+                  {userProfile.name.charAt(0)}
                 </div>
-                <p className="text-sm text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
-                  Points earned by helping keep the community safe.
-                </p>
+                <h3 className="text-2xl font-bold text-white mb-1">{userProfile.name}</h3>
+                <p className="text-slate-400 mb-2 font-medium capitalize">{userProfile.role} Contributor</p>
+                <div className="text-sm text-slate-500 mb-8">{userProfile.email}</div>
+                
+                <div className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Points Wallet</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-xl">
+                      <CheckCircle2 className="w-8 h-8" />
+                    </div>
+                    <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 tracking-tighter">
+                      {userProfile.points_balance}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
+                    Points earned by helping keep the community safe.
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-center">
-              <p className="font-medium">Failed to load profile details</p>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-center">
+                <p className="font-medium">Failed to load profile details</p>
+              </div>
+            )}
+          </div>
+        </ProtectedRoute>
       );
     }
 
-    const filteredIssues = issues
-      .filter(issue => selectedCategory === 'All' || issue.category === selectedCategory)
-      .filter(issue => selectedSeverity === 'All' || issue.severity?.toLowerCase() === selectedSeverity.toLowerCase())
-      .filter(issue => selectedStatus === 'All' || (issue.status || 'Pending') === selectedStatus)
-      .sort((a, b) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
-      });
+    if (activeTab === 'dashboard') {
+      const filteredIssues = issues
+        .filter(issue => selectedCategory === 'All' || issue.category === selectedCategory)
+        .filter(issue => selectedSeverity === 'All' || issue.severity?.toLowerCase() === selectedSeverity.toLowerCase())
+        .filter(issue => selectedStatus === 'All' || (issue.status || 'Pending') === selectedStatus)
+        .sort((a, b) => {
+          if (sortOrder === 'most-upvotes') {
+            const upvotesA = a.upvote_count || 0;
+            const upvotesB = b.upvote_count || 0;
+            if (upvotesA !== upvotesB) {
+              return upvotesB - upvotesA;
+            }
+          }
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+          return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        });
 
-    return (
-      <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <h2 className="text-2xl font-semibold text-white flex items-center gap-2 shrink-0">
-            <LayoutDashboard className="w-6 h-6 text-blue-400" />
-            Live Dashboard
-          </h2>
+      return (
+        <ProtectedRoute user={currentUser}>
+          <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+              <h2 className="text-2xl font-semibold text-white flex items-center gap-2 shrink-0">
+                <LayoutDashboard className="w-6 h-6 text-blue-400" />
+                {isAdmin ? 'Admin Dashboard' : 'Live Dashboard'}
+              </h2>
           
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 shrink-0">
@@ -425,9 +492,10 @@ export default function App() {
             
             <select
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest' | 'most-upvotes')}
               className="bg-slate-900 border border-slate-800 text-slate-300 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-slate-700 transition-colors cursor-pointer"
             >
+              <option value="most-upvotes">Sort by Upvotes</option>
               <option value="newest">Sort by Newest</option>
               <option value="oldest">Sort by Oldest</option>
             </select>
@@ -507,8 +575,17 @@ export default function App() {
                 className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-colors shadow-lg flex flex-col h-full"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div className={`px-3 py-1 rounded-full text-xs border ${severityColor(issue.severity)}`}>
-                    {issue.severity} Severity
+                  <div className="flex flex-col gap-2">
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium border text-center w-fit ${severityColor(issue.severity)}`}>
+                      {issue.severity} Severity
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold border text-center w-fit ${
+                      (issue.upvote_count || 0) >= 2 
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' 
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      {(issue.upvote_count || 0) >= 2 ? 'High Priority' : 'Normal Priority'}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     {isAdmin && issue.status !== 'Resolved' && (
@@ -542,22 +619,45 @@ export default function App() {
                 </div>
                 
                 <h3 className="text-xl font-medium text-white mb-2">{issue.category}</h3>
+                
+                {issue.photo_url && (
+                  <div className="mb-4 rounded-xl overflow-hidden shadow-sm aspect-video bg-slate-950 flex items-center justify-center">
+                    <img src={issue.photo_url} alt={issue.category} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                
                 <p className="text-slate-400 text-sm leading-relaxed mb-6 flex-grow">
                   {issue.description}
                 </p>
 
-                <div className="pt-4 border-t border-slate-800/50 flex items-center gap-2 text-xs text-slate-500 mt-auto">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {issue.latitude && issue.longitude 
-                    ? `${Number(issue.latitude).toFixed(3)}, ${Number(issue.longitude).toFixed(3)}`
-                    : 'Location unavailable'}
+                <div className="pt-4 border-t border-slate-800/50 flex flex-col gap-3 mt-auto">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {issue.latitude && issue.longitude 
+                        ? `${Number(issue.latitude).toFixed(3)}, ${Number(issue.longitude).toFixed(3)}`
+                        : 'Location unavailable'}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-bold text-amber-500">{issue.upvote_count || 0}</span>
+                      <button 
+                        onClick={() => handleUpvote(issue.id)}
+                        className="p-1 hover:bg-slate-800 text-slate-400 hover:text-amber-500 rounded-md transition-colors"
+                        title="Upvote Issue"
+                      >
+                        <ArrowUpCircle className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      </ProtectedRoute>
     );
+    }
   };
 
   return (
@@ -588,7 +688,7 @@ export default function App() {
                   activeTab === 'dashboard' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Live Dashboard
+                {isAdmin ? 'Admin Dashboard' : 'Dashboard'}
               </button>
               <button
                 onClick={() => setActiveTab('profile')}
@@ -597,6 +697,12 @@ export default function App() {
                 }`}
               >
                 Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-rose-400 transition-colors ml-2"
+              >
+                Logout
               </button>
             </div>
           </div>
@@ -609,4 +715,31 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
+  );
+}
+
+function AppRouter() {
+  const { isAuthenticated } = useAuth();
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+        {authMode === 'login' ? (
+          <Login onSwitchToRegister={() => setAuthMode('signup')} />
+        ) : (
+          <Register onSwitchToLogin={() => setAuthMode('login')} />
+        )}
+      </div>
+    );
+  }
+
+  return <MainApp />;
 }

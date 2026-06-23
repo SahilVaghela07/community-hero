@@ -387,9 +387,7 @@ function MainApp() {
             </div>
           )}
         </div>
-=======
           <ReportIssue />
->>>>>>> 92777e156c9fe1dc8c3e3c9cdcbae22fd277bc9c
         </ProtectedRoute>
       );
     }

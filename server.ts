@@ -47,6 +47,14 @@ async function initDb() {
   if (db) {
     try {
       await db.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(100),
+          points_balance INT DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await db.query(`
         CREATE TABLE IF NOT EXISTS issues (
           id INT AUTO_INCREMENT PRIMARY KEY,
           category VARCHAR(50),
@@ -55,10 +63,13 @@ async function initDb() {
           latitude DECIMAL(10, 8),
           longitude DECIMAL(11, 8),
           status VARCHAR(50) DEFAULT 'Pending',
+          reporter_id INT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      console.log('MySQL issues table ensured.');
+      // Seed a default test user
+      await db.query(`INSERT IGNORE INTO users (id, name, points_balance) VALUES (1, 'Test User', 0)`);
+      console.log('MySQL schema ensured.');
     } catch (e) {
       console.warn('Could not initialize MySQL tables. Is the DB running?', e);
     }
@@ -136,14 +147,16 @@ app.post('/api/issues', upload.single('image'), async (req, res) => {
     const db = getDbPool();
     if (db) {
       try {
+        // We mock reporter_id = 1 for the logged in user
         await db.execute(
-          'INSERT INTO issues (category, severity, description, latitude, longitude) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO issues (category, severity, description, latitude, longitude, reporter_id) VALUES (?, ?, ?, ?, ?, ?)',
           [
             aiResult.category, 
             aiResult.severity, 
             aiResult.description, 
             latitude ? parseFloat(latitude) : null, 
-            longitude ? parseFloat(longitude) : null
+            longitude ? parseFloat(longitude) : null,
+            1
           ]
         );
       } catch (dbError) {
@@ -230,6 +243,76 @@ app.patch('/api/issues/:id/status', async (req, res) => {
   } catch (error) {
     console.error("Error updating issue:", error);
     res.status(500).json({ success: false, error: "Failed to update issue" });
+  }
+});
+
+app.get('/api/users/me', async (req, res) => {
+  try {
+    const db = getDbPool();
+    if (db) {
+      // Mock authenticated user is id 1
+      const userId = 1;
+      const [users] = await db.execute('SELECT id, name, points_balance FROM users WHERE id = ?', [userId]) as any;
+      if (users.length > 0) {
+        res.json({ success: true, data: users[0] });
+      } else {
+        res.status(404).json({ success: false, error: 'User not found' });
+      }
+    } else {
+      res.status(503).json({ success: false, error: 'Database connection not available.' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to fetch user profile" });
+  }
+});
+
+app.patch('/api/issues/:id/resolve', async (req, res) => {
+  try {
+    const db = getDbPool();
+    if (!db) {
+      return res.status(503).json({ success: false, error: 'Database connection not available.' });
+    }
+
+    const issueId = req.params.id;
+    const connection = await db.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      // Check if issue exists and get reporter_id
+      const [issues] = await connection.execute('SELECT reporter_id, status FROM issues WHERE id = ?', [issueId]) as any;
+      if (issues.length === 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(404).json({ success: false, error: 'Issue not found' });
+      }
+
+      const issue = issues[0];
+      if (issue.status === 'Resolved') {
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({ success: false, error: 'Issue already resolved' });
+      }
+
+      // Update status to Resolved
+      await connection.execute('UPDATE issues SET status = "Resolved" WHERE id = ?', [issueId]);
+
+      // Add 50 points to reporter
+      if (issue.reporter_id) {
+        await connection.execute('UPDATE users SET points_balance = points_balance + 50 WHERE id = ?', [issue.reporter_id]);
+      }
+
+      await connection.commit();
+      connection.release();
+      res.json({ success: true, message: 'Issue Resolved! 50 Points awarded to the reporter.', status: 'Resolved' });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      throw err;
+    }
+  } catch (error) {
+    console.error("Error resolving issue:", error);
+    res.status(500).json({ success: false, error: "Failed to resolve issue" });
   }
 });
 

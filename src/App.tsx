@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2, CheckCircle2, Circle, User } from 'lucide-react';
 
 interface Issue {
   id: number;
@@ -13,9 +13,20 @@ interface Issue {
   created_at: string;
 }
 
+interface UserProfile {
+  id: number;
+  name: string;
+  points_balance: number;
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'report' | 'dashboard'>('report');
+  const [activeTab, setActiveTab] = useState<'report' | 'dashboard' | 'profile'>('report');
+  const [isAdmin, setIsAdmin] = useState(true); // Toggle for Authority/Admin view
   
+  // Profile State
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   // Report Form State
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -60,8 +71,24 @@ export default function App() {
       }
     } else if (activeTab === 'dashboard') {
       fetchIssues();
+    } else if (activeTab === 'profile') {
+      fetchProfile();
     }
   }, [activeTab]);
+
+  const fetchProfile = async () => {
+    setProfileLoading(true);
+    try {
+      const response = await axios.get('/api/users/me');
+      if (response.data.success) {
+        setUserProfile(response.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const fetchIssues = async () => {
     setDashboardLoading(true);
@@ -97,20 +124,20 @@ export default function App() {
     }
   };
 
-  const handleStatusToggle = async (id: number, currentStatus: string) => {
-    const newStatus = currentStatus === 'Pending' ? 'Resolved' : 'Pending';
+  const handleResolve = async (id: number) => {
     try {
-      const response = await axios.patch(`/api/issues/${id}/status`, { status: newStatus });
+      const response = await axios.patch(`/api/issues/${id}/resolve`);
       if (response.data.success) {
         setIssues(prevIssues => prevIssues.map(issue => 
-          issue.id === id ? { ...issue, status: newStatus } : issue
+          issue.id === id ? { ...issue, status: 'Resolved' } : issue
         ));
+        alert('Issue Resolved! 50 Points awarded to the reporter.');
       } else {
-        alert('Failed to update status.');
+        alert(response.data.error || 'Failed to update status.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('An error occurred while updating the status.');
+      alert(err.response?.data?.error || 'An error occurred while resolving the issue.');
     }
   };
 
@@ -298,6 +325,50 @@ export default function App() {
       );
     }
 
+    if (activeTab === 'profile') {
+      return (
+        <div className="w-full max-w-md mx-auto space-y-8 animate-in fade-in duration-500 mt-8">
+          <h2 className="text-2xl font-semibold text-white flex items-center gap-2 mb-6">
+            <User className="w-6 h-6 text-blue-400" />
+            My Profile
+          </h2>
+          
+          {profileLoading ? (
+            <div className="flex justify-center py-20 text-slate-500">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          ) : userProfile ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-lg mb-6">
+                {userProfile.name.charAt(0)}
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-1">{userProfile.name}</h3>
+              <p className="text-slate-400 mb-8 font-medium">Community Contributor</p>
+              
+              <div className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Points Wallet</p>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-xl">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 tracking-tighter">
+                    {userProfile.points_balance}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
+                  Points earned by helping keep the community safe.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-center">
+              <p className="font-medium">Failed to load profile details</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const filteredIssues = issues
       .filter(issue => selectedCategory === 'All' || issue.category === selectedCategory)
       .filter(issue => selectedSeverity === 'All' || issue.severity?.toLowerCase() === selectedSeverity.toLowerCase())
@@ -432,18 +503,22 @@ export default function App() {
                     {issue.severity} Severity
                   </div>
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleStatusToggle(issue.id, issue.status || 'Pending')}
-                      className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md transition-colors border ${
-                        (issue.status || 'Pending') === 'Resolved' 
-                          ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20' 
-                          : 'border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800'
-                      }`}
-                      title={issue.status === 'Resolved' ? 'Mark as Pending' : 'Mark as Resolved'}
-                    >
-                      {(issue.status || 'Pending') === 'Resolved' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
-                      {issue.status || 'Pending'}
-                    </button>
+                    {isAdmin && issue.status !== 'Resolved' && (
+                      <button
+                        onClick={() => handleResolve(issue.id)}
+                        className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md transition-colors border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800"
+                        title="Mark as Resolved"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Mark as Resolved
+                      </button>
+                    )}
+                    {issue.status === 'Resolved' && (
+                      <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md border border-emerald-500/50 text-emerald-400 bg-emerald-500/10">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Resolved
+                      </div>
+                    )}
                     <div className="text-xs text-slate-500 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {new Date(issue.created_at).toLocaleDateString()}
@@ -506,6 +581,14 @@ export default function App() {
                 }`}
               >
                 Live Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'profile' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Profile
               </button>
             </div>
           </div>

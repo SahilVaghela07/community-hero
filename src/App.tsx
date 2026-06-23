@@ -66,6 +66,8 @@ const ProtectedRoute = ({ user, roleRequired, children }: { user: UserProfile | 
 import { Login } from './auth/Login';
 import { Register } from './auth/Register';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { ReportIssue } from './citizen/ReportIssue';
+import { CitizenDashboard } from './citizen/CitizenDashboard';
 
 function MainApp() {
   const { user: currentUser, logout, isAuthenticated } = useAuth();
@@ -275,6 +277,7 @@ function MainApp() {
     if (activeTab === 'report') {
       return (
         <ProtectedRoute user={currentUser}>
+
           <div className="w-full max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
           {/* Upload Card */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
@@ -384,10 +387,20 @@ function MainApp() {
             </div>
           )}
         </div>
+=======
+          <ReportIssue />
+>>>>>>> 92777e156c9fe1dc8c3e3c9cdcbae22fd277bc9c
         </ProtectedRoute>
       );
     }
 
+    if (activeTab === 'dashboard') {
+      return (
+        <ProtectedRoute user={currentUser}>
+          <CitizenDashboard />
+        </ProtectedRoute>
+      );
+    }
     if (activeTab === 'profile') {
       return (
         <ProtectedRoute user={currentUser}>
@@ -434,230 +447,8 @@ function MainApp() {
         </ProtectedRoute>
       );
     }
-
-    if (activeTab === 'dashboard') {
-      const filteredIssues = issues
-        .filter(issue => selectedCategory === 'All' || issue.category === selectedCategory)
-        .filter(issue => selectedSeverity === 'All' || issue.severity?.toLowerCase() === selectedSeverity.toLowerCase())
-        .filter(issue => selectedStatus === 'All' || (issue.status || 'Pending') === selectedStatus)
-        .sort((a, b) => {
-          if (sortOrder === 'most-upvotes') {
-            const upvotesA = a.upvote_count || 0;
-            const upvotesB = b.upvote_count || 0;
-            if (upvotesA !== upvotesB) {
-              return upvotesB - upvotesA;
-            }
-          }
-          const dateA = new Date(a.created_at).getTime();
-          const dateB = new Date(b.created_at).getTime();
-          return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
-        });
-
-      return (
-        <ProtectedRoute user={currentUser}>
-          <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-              <h2 className="text-2xl font-semibold text-white flex items-center gap-2 shrink-0">
-                <LayoutDashboard className="w-6 h-6 text-blue-400" />
-                {isAdmin ? 'Admin Dashboard' : 'Live Dashboard'}
-              </h2>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex bg-slate-900 border border-slate-800 rounded-xl p-1 shrink-0">
-              <button
-                onClick={() => setSelectedStatus('All')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedStatus === 'All' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setSelectedStatus('Pending')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedStatus === 'Pending' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Open
-              </button>
-              <button
-                onClick={() => setSelectedStatus('Resolved')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  selectedStatus === 'Resolved' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Resolved
-              </button>
-            </div>
-            
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest' | 'most-upvotes')}
-              className="bg-slate-900 border border-slate-800 text-slate-300 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-slate-700 transition-colors cursor-pointer"
-            >
-              <option value="most-upvotes">Sort by Upvotes</option>
-              <option value="newest">Sort by Newest</option>
-              <option value="oldest">Sort by Oldest</option>
-            </select>
-            <button 
-              onClick={fetchIssues}
-              className="text-sm border border-slate-800 font-medium text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-xl transition-colors"
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-500 w-20">Category:</span>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none flex-1">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-                    selectedCategory === cat 
-                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' 
-                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-300'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-             <span className="text-sm font-medium text-slate-500 w-20">Severity:</span>
-             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none flex-1">
-              {severities.map(sev => (
-                <button
-                  key={sev}
-                  onClick={() => setSelectedSeverity(sev)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-                    selectedSeverity === sev 
-                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' 
-                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-300'
-                  }`}
-                >
-                  {sev}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {dashboardLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-            <Loader2 className="w-8 h-8 animate-spin mb-4 text-blue-500" />
-            <p>Loading reports...</p>
-          </div>
-        ) : dashboardError ? (
-          <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-center">
-            <p className="mb-2 font-medium">Error loading dashboard</p>
-            <p className="text-sm opacity-80">{dashboardError}</p>
-          </div>
-        ) : filteredIssues.length === 0 ? (
-          <div className="text-center py-20 bg-slate-900 border border-slate-800 rounded-3xl">
-            <p className="text-slate-400 text-lg">
-              {issues.length === 0 ? 'No issues reported yet.' : 'No issues found for this category.'}
-            </p>
-            <p className="text-slate-500 mt-2 text-sm">
-              {issues.length === 0 ? 'Be the first to keep your community safe.' : 'Try selecting a different filter.'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredIssues.map((issue) => (
-              <div 
-                key={issue.id} 
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-colors shadow-lg flex flex-col h-full"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex flex-col gap-2">
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium border text-center w-fit ${severityColor(issue.severity)}`}>
-                      {issue.severity} Severity
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold border text-center w-fit ${
-                      (issue.upvote_count || 0) >= 2 
-                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' 
-                        : 'bg-slate-800 text-slate-300 border-slate-700'
-                    }`}>
-                      {(issue.upvote_count || 0) >= 2 ? 'High Priority' : 'Normal Priority'}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {isAdmin && issue.status !== 'Resolved' && (
-                      <button
-                        onClick={() => handleResolve(issue.id)}
-                        className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md transition-colors border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800"
-                        title="Mark as Resolved"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Mark as Resolved
-                      </button>
-                    )}
-                    {issue.status === 'Resolved' && (
-                      <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md border border-emerald-500/50 text-emerald-400 bg-emerald-500/10">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Resolved
-                      </div>
-                    )}
-                    <div className="text-xs text-slate-500 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(issue.created_at).toLocaleDateString()}
-                    </div>
-                    <button 
-                      onClick={() => handleDelete(issue.id)}
-                      className="text-slate-500 hover:text-red-400 p-1 rounded-md hover:bg-slate-800 transition-colors"
-                      title="Delete Issue"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                
-                <h3 className="text-xl font-medium text-white mb-2">{issue.category}</h3>
-                
-                {issue.photo_url && (
-                  <div className="mb-4 rounded-xl overflow-hidden shadow-sm aspect-video bg-slate-950 flex items-center justify-center">
-                    <img src={issue.photo_url} alt={issue.category} className="w-full h-full object-cover" />
-                  </div>
-                )}
-                
-                <p className="text-slate-400 text-sm leading-relaxed mb-6 flex-grow">
-                  {issue.description}
-                </p>
-
-                <div className="pt-4 border-t border-slate-800/50 flex flex-col gap-3 mt-auto">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {issue.latitude && issue.longitude 
-                        ? `${Number(issue.latitude).toFixed(3)}, ${Number(issue.longitude).toFixed(3)}`
-                        : 'Location unavailable'}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-bold text-amber-500">{issue.upvote_count || 0}</span>
-                      <button 
-                        onClick={() => handleUpvote(issue.id)}
-                        className="p-1 hover:bg-slate-800 text-slate-400 hover:text-amber-500 rounded-md transition-colors"
-                        title="Upvote Issue"
-                      >
-                        <ArrowUpCircle className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      </ProtectedRoute>
-    );
-    }
+    
+    return null;
   };
 
   return (

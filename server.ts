@@ -54,6 +54,7 @@ async function initDb() {
           description TEXT,
           latitude DECIMAL(10, 8),
           longitude DECIMAL(11, 8),
+          status VARCHAR(50) DEFAULT 'Pending',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
@@ -196,6 +197,39 @@ app.delete('/api/issues/:id', async (req, res) => {
   } catch (error) {
     console.error("Error deleting issue:", error);
     res.status(500).json({ success: false, error: "Failed to delete issue" });
+  }
+});
+
+app.patch('/api/issues/:id/status', async (req, res) => {
+  try {
+    const db = getDbPool();
+    if (db) {
+      const issueId = req.params.id;
+      // using body parser
+      let data = '';
+      req.on('data', chunk => { data += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          const body = JSON.parse(data || '{}');
+          const status = body.status;
+          if (!status) {
+            return res.status(400).json({ success: false, error: 'Status is required' });
+          }
+          const [result] = await db.execute('UPDATE issues SET status = ? WHERE id = ?', [status, issueId]) as any;
+          if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Issue not found' });
+          }
+          res.json({ success: true, message: 'Issue status updated', status });
+        } catch (e) {
+            res.status(400).json({ success: false, error: 'Invalid JSON body' });
+        }
+      });
+    } else {
+      res.status(503).json({ success: false, error: 'Database connection not available.' });
+    }
+  } catch (error) {
+    console.error("Error updating issue:", error);
+    res.status(500).json({ success: false, error: "Failed to update issue" });
   }
 });
 

@@ -8,7 +8,7 @@ declare global {
   }
 }
 import axios from 'axios';
-import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar } from 'lucide-react';
+import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2 } from 'lucide-react';
 
 interface Issue {
   id: number;
@@ -37,6 +37,11 @@ export default function App() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+  
+  // Filter & Sort State
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const categories = ['All', 'Pothole', 'Streetlight', 'Leak', 'Garbage', 'Other'];
 
   useEffect(() => {
     if (activeTab === 'report') {
@@ -77,6 +82,22 @@ export default function App() {
       setDashboardError('Database cannot be reached or is not configured.');
     } finally {
       setDashboardLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this issue?')) {
+      try {
+        const response = await axios.delete(`/api/issues/${id}`);
+        if (response.data.success) {
+          setIssues(prevIssues => prevIssues.filter(issue => issue.id !== id));
+        } else {
+          alert('Failed to delete issue.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while deleting the issue.');
+      }
     }
   };
 
@@ -244,7 +265,7 @@ export default function App() {
                       <p className="text-lg font-medium text-white">{result.category}</p>
                     </div>
                     <div className={`border rounded-xl p-4 flex flex-col justify-center ${severityColor(result.severity)}`}>
-                       <p className="text-xs uppercase tracking-wider font-semibold mb-1 opacity-70">Severity</p>
+                      <p className="text-xs uppercase tracking-wider font-semibold mb-1 opacity-70">Severity</p>
                       <p className="text-lg font-medium">{result.severity}</p>
                     </div>
                   </div>
@@ -264,19 +285,54 @@ export default function App() {
       );
     }
 
+    const filteredIssues = issues
+      .filter(issue => selectedCategory === 'All' || issue.category === selectedCategory)
+      .sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+      });
+
     return (
       <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+          <h2 className="text-2xl font-semibold text-white flex items-center gap-2 shrink-0">
             <LayoutDashboard className="w-6 h-6 text-blue-400" />
             Live Dashboard
           </h2>
-          <button 
-            onClick={fetchIssues}
-            className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
-          >
-            Refresh Data
-          </button>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+              className="bg-slate-900 border border-slate-800 text-slate-300 text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-slate-700 transition-colors cursor-pointer"
+            >
+              <option value="newest">Sort by Newest</option>
+              <option value="oldest">Sort by Oldest</option>
+            </select>
+            <button 
+              onClick={fetchIssues}
+              className="text-sm border border-slate-800 font-medium text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-xl transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none -mt-2">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
+                selectedCategory === cat 
+                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' 
+                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-300'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
 
         {dashboardLoading ? (
@@ -289,14 +345,18 @@ export default function App() {
             <p className="mb-2 font-medium">Error loading dashboard</p>
             <p className="text-sm opacity-80">{dashboardError}</p>
           </div>
-        ) : issues.length === 0 ? (
+        ) : filteredIssues.length === 0 ? (
           <div className="text-center py-20 bg-slate-900 border border-slate-800 rounded-3xl">
-            <p className="text-slate-400 text-lg">No issues reported yet.</p>
-            <p className="text-slate-500 mt-2 text-sm">Be the first to keep your community safe.</p>
+            <p className="text-slate-400 text-lg">
+              {issues.length === 0 ? 'No issues reported yet.' : 'No issues found for this category.'}
+            </p>
+            <p className="text-slate-500 mt-2 text-sm">
+              {issues.length === 0 ? 'Be the first to keep your community safe.' : 'Try selecting a different filter.'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {issues.map((issue) => (
+            {filteredIssues.map((issue) => (
               <div 
                 key={issue.id} 
                 className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition-colors shadow-lg flex flex-col h-full"
@@ -305,9 +365,18 @@ export default function App() {
                   <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${severityColor(issue.severity)}`}>
                     {issue.severity} Severity
                   </div>
-                  <div className="text-xs text-slate-500 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(issue.created_at).toLocaleDateString()}
+                  <div className="flex items-center gap-3">
+                    <div className="text-xs text-slate-500 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(issue.created_at).toLocaleDateString()}
+                    </div>
+                    <button 
+                      onClick={() => handleDelete(issue.id)}
+                      className="text-slate-500 hover:text-red-400 p-1 rounded-md hover:bg-slate-800 transition-colors"
+                      title="Delete Issue"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
                 

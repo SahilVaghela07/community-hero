@@ -216,101 +216,39 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
   }
 });
 
-app.post('/api/issues', authenticateToken, upload.single('image'), async (req, res) => {
+app.post('/api/issues', authenticateToken, async (req, res) => {
   try {
-    const file = req.file;
-    const { latitude, longitude } = req.body;
-    const userId = (req as any).user?.id || null;
+    const { photo_url, description, type, reporter_id } = req.body;
+    const userId = (req as any).user?.id || reporter_id;
 
-    if (!file) {
-      return res.status(400).json({ error: 'Image file is required.' });
+    if (!description || !type) {
+      return res.status(400).json({ error: 'Description and type are required.' });
     }
 
-    const base64Image = file.buffer.toString('base64');
-    
-    // Schema for structured JSON output from Gemini
-    const responseSchema: Schema = {
-      type: Type.OBJECT,
-      properties: {
-        category: {
-          type: Type.STRING,
-          description: "One of: Pothole, Streetlight, Leak, Garbage, Other",
-        },
-        severity: {
-          type: Type.STRING,
-          description: "One of: Low, Medium, High",
-        },
-        description: {
-          type: Type.STRING,
-          description: "A brief 1-sentence summary of the issue.",
-        }
-      },
-      required: ["category", "severity", "description"]
-    };
-
-    let aiResult;
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          {
-            role: "user",
-            parts: [
-               { text: "Analyze this image of a civic issue. Provide the category, severity, and a brief description." },
-               { inlineData: { data: base64Image, mimeType: file.mimetype } }
-            ]
-          }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: responseSchema,
-        }
-      });
-      
-      const responseText = response.text;
-      if (responseText) {
-          aiResult = JSON.parse(responseText);
-      } else {
-        throw new Error('Empty response from AI.');
-      }
-    } catch (aiError) {
-      console.error("Gemini API error, falling back to mock data:", aiError);
-      // Fallback in case of AI failure
-      aiResult = {
-        category: "Other",
-        severity: "Medium",
-        description: "An issue was reported but AI analysis is currently unavailable."
-      };
-    }
-
-    // Insert into MySQL if available
     const db = getDbPool();
-    let photoUrl = 'https://placehold.co/400x300?text=' + encodeURIComponent(aiResult.category || 'Issue');
     if (db) {
       try {
         await db.execute(
-          'INSERT INTO issues (category, severity, description, latitude, longitude, reporter_id, photo_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO issues (category, severity, description, reporter_id, photo_url) VALUES (?, ?, ?, ?, ?)',
           [
-            aiResult.category, 
-            aiResult.severity, 
-            aiResult.description, 
-            latitude ? parseFloat(latitude) : null, 
-            longitude ? parseFloat(longitude) : null,
+            type, 
+            'Medium', // Default severity
+            description, 
             userId,
-            photoUrl
+            photo_url || 'https://placehold.co/400x300?text=' + encodeURIComponent(type)
           ]
         );
       } catch (dbError) {
         console.error("Error inserting into MySQL table:", dbError);
-        // Continue and return success to UI anyway
+        return res.status(500).json({ error: "Database error" });
       }
     } else {
-      console.log('Skipping MySQL insert (no DB configured or running). Simulated insert:', aiResult);
+      return res.status(503).json({ error: "Database connection not available" });
     }
 
     res.json({
       success: true,
-      data: { ...aiResult, photo_url: photoUrl }
+      message: "Issue reported successfully"
     });
 
   } catch (error) {
@@ -319,12 +257,14 @@ app.post('/api/issues', authenticateToken, upload.single('image'), async (req, r
   }
 });
 
-app.post('/api/issues/:id/upvote', authenticateToken, async (req, res) => {
+app.post(['/api/issues/:id/upvote', '/api/upvote'], authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const issueId = req.params.id;
+    const issueId = req.params.id || req.body.issue_id;
+    if (!issueId) return res.status(400).json({ error: 'Issue ID is required' });
+
     const db = getDbPool();
     if (!db) return res.status(503).json({ error: 'Database unavailable' });
 

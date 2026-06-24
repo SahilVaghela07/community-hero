@@ -65,12 +65,32 @@ export const AdminDashboard: React.FC = () => {
           return;
         }
 
-        const headers = Object.keys(data[0]).join(',');
+        const headersArray = ['ID', 'Category', 'Severity', 'Description', 'Latitude', 'Longitude', 'Status', 'Upvotes', 'Created At', 'Photo URL'];
+        const headers = headersArray.join(',');
         
         const rows = data.map((row: any) => {
-          return Object.values(row).map((val: any) => {
+          let photoVal = row.photo_url || '';
+          if (photoVal.startsWith('data:image')) {
+            photoVal = '[Base64 Image Data]';
+          }
+
+          const rowData = [
+            row.id,
+            row.category,
+            row.severity,
+            row.description,
+            row.latitude || '',
+            row.longitude || '',
+            row.status,
+            row.upvote_count || 0,
+            new Date(row.created_at).toLocaleString(),
+            photoVal
+          ];
+
+          return rowData.map((val: any) => {
             if (typeof val === 'string') {
-              return `"${val.replace(/"/g, '""')}"`;
+              const cleanString = val.replace(/\r?\n|\r/g, ' ').replace(/"/g, '""');
+              return `"${cleanString}"`;
             }
             return val;
           }).join(',');

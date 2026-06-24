@@ -1,12 +1,20 @@
-# Community Hero 🚀
-A civic infrastructure reporting tool utilizing AI-driven image analysis to prioritize road and utility repairs.
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+</div>
 
-## Features
-- **AI Analysis**: Automatically categorize and rate the severity of issues via Gemini AI.
-- **Live Dashboard**: Real-time monitoring of all reported infrastructure issues.
-- **Geo-Tagged**: Reports are mapped with precise coordinates.
+# Run and deploy your AI Studio app
 
-## Tech Stack
-- Frontend: React (Vite), TypeScript, Tailwind CSS, Lucide-React
-- Backend: Node.js, Express, MySQL
-- AI: Google Gemini 1.5 Pro
+This contains everything you need to run your app locally.
+
+View your app in AI Studio: https://ai.studio/apps/7fa5afae-52be-41ed-8153-e00b6dc1d325
+
+## Run Locally
+
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

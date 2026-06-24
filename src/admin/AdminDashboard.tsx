@@ -41,9 +41,7 @@ export const AdminDashboard: React.FC = () => {
   const updateStatus = async (id: number, newStatus: string) => {
     try {
       await axios.patch(`/api/issues/${id}/status`, { status: newStatus });
-      setIssues(issues.map(issue => 
-        issue.id === id ? { ...issue, status: newStatus } : issue
-      ));
+      fetchIssues(); // Refresh the list
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to update status');
     }
@@ -89,7 +87,11 @@ export const AdminDashboard: React.FC = () => {
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-700">
         {statusIssues.map((issue: Issue) => (
-          <div key={issue.id} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 shadow-sm hover:border-slate-600 transition-colors flex flex-col gap-3">
+          <div 
+            key={issue.id} 
+            onClick={() => openMap(issue.latitude, issue.longitude)}
+            className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 shadow-sm hover:border-slate-600 cursor-pointer transition-colors flex flex-col gap-3 group"
+          >
             <div className="flex justify-between items-start">
               <span className="px-2 py-1 bg-slate-900 text-slate-300 border border-slate-700 rounded-md text-[10px] font-semibold uppercase tracking-wider">
                 {issue.category}
@@ -103,16 +105,13 @@ export const AdminDashboard: React.FC = () => {
               {issue.description}
             </p>
 
-            <button
-              onClick={() => openMap(issue.latitude, issue.longitude)}
-              className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors w-fit p-1 -ml-1 rounded hover:bg-blue-500/10"
-            >
+            <div className="flex items-center gap-1.5 text-xs text-blue-400 group-hover:text-blue-300 transition-colors w-fit p-1 -ml-1 rounded hover:bg-blue-500/10">
               <MapPin className="w-3.5 h-3.5" />
-              View on Map
-            </button>
+              View Location on Map
+            </div>
 
             {nextStatus && (
-              <div className="pt-3 mt-1 border-t border-slate-700/50">
+              <div className="pt-3 mt-1 border-t border-slate-700/50" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => updateStatus(issue.id, nextStatus)}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-xs font-medium"

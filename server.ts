@@ -407,6 +407,21 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
     const db = getDbPool();
     if (db) {
       const userId = userPayload.id;
+      
+      // Handle hardcoded admin
+      if (userId === 0 && userPayload.role === 'admin') {
+        return res.json({ 
+          success: true, 
+          data: { 
+            id: 0, 
+            name: 'City Administrator', 
+            email: userPayload.email, 
+            role: 'admin', 
+            points_balance: 0 
+          } 
+        });
+      }
+
       const [users] = await db.execute('SELECT id, name, email, role, points_balance FROM users WHERE id = ?', [userId]) as any;
       if (users.length > 0) {
         res.json({ success: true, data: users[0] });

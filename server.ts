@@ -413,6 +413,7 @@ app.patch('/api/issues/:id/status', authorizeRole('admin'), async (req, res) => 
             'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
             [issue.reporter_id, 'Great news! Your report has been resolved. You have earned 50 reward points!']
           );
+          console.log(`Inserted notification for user ${issue.reporter_id}`);
           message = 'Issue Completed! 50 Points awarded to the reporter.';
         }
       }
@@ -479,6 +480,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
     if (!db) return res.status(503).json({ success: false, error: 'Database connection not available.' });
 
     const [notifications] = await db.execute('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC', [userPayload.id]);
+    console.log(`GET /api/notifications for user ${userPayload.id}: returning ${Array.isArray(notifications) ? notifications.length : 0} rows`);
     res.json({ success: true, data: notifications });
   } catch (error) {
     console.error("Error fetching notifications:", error);

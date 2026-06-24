@@ -218,7 +218,7 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
 
 app.post('/api/issues', authenticateToken, async (req, res) => {
   try {
-    const { photo_url, description, type, reporter_id } = req.body;
+    const { photo_url, description, type, reporter_id, latitude, longitude } = req.body;
     const userId = (req as any).user?.id || reporter_id;
 
     if (!description || !type) {
@@ -229,13 +229,15 @@ app.post('/api/issues', authenticateToken, async (req, res) => {
     if (db) {
       try {
         await db.execute(
-          'INSERT INTO issues (category, severity, description, reporter_id, photo_url) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO issues (category, severity, description, reporter_id, photo_url, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)',
           [
             type, 
             'Medium', // Default severity
             description, 
             userId,
-            photo_url || 'https://placehold.co/400x300?text=' + encodeURIComponent(type)
+            photo_url || 'https://placehold.co/400x300?text=' + encodeURIComponent(type),
+            latitude || null,
+            longitude || null
           ]
         );
       } catch (dbError) {
@@ -342,19 +344,53 @@ app.delete('/api/issues/:id', authorizeRole('admin'), async (req, res) => {
 app.patch('/api/issues/:id/status', authorizeRole('admin'), async (req, res) => {
   try {
     const db = getDbPool();
-    if (db) {
-      const issueId = req.params.id;
-      const status = req.body.status;
-      if (!status) {
-        return res.status(400).json({ success: false, error: 'Status is required' });
-      }
-      const [result] = await db.execute('UPDATE issues SET status = ? WHERE id = ?', [status, issueId]) as any;
-      if (result.affectedRows === 0) {
+    if (!db) {
+      return res.status(503).json({ success: false, error: 'Database connection not available.' });
+    }
+
+    const issueId = req.params.id;
+    const status = req.body.status;
+    if (!['Pending', 'Working', 'Completed'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid status' });
+    }
+
+    const connection = await db.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      const [issues] = await connection.execute('SELECT reporter_id, status FROM issues WHERE id = ?', [issueId]) as any;
+      if (issues.length === 0) {
+        await connection.rollback();
+        connection.release();
         return res.status(404).json({ success: false, error: 'Issue not found' });
       }
-      res.json({ success: true, message: 'Issue status updated', status });
-    } else {
-      res.status(503).json({ success: false, error: 'Database connection not available.' });
+
+      const issue = issues[0];
+      if (issue.status === status) {
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({ success: false, error: `Issue already ${status}` });
+      }
+
+      await connection.execute('UPDATE issues SET status = ? WHERE id = ?', [status, issueId]);
+
+      let message = `Issue status updated to ${status}`;
+
+      if (status === 'Completed' && issue.status !== 'Completed') {
+        if (issue.reporter_id) {
+          await connection.execute('UPDATE users SET points_balance = points_balance + 50 WHERE id = ?', [issue.reporter_id]);
+          message = 'Issue Completed! 50 Points awarded to the reporter.';
+        }
+      }
+
+      await connection.commit();
+      connection.release();
+      res.json({ success: true, message, status });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      throw err;
     }
   } catch (error) {
     console.error("Error updating issue:", error);
@@ -382,56 +418,6 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ success: false, error: "Failed to fetch user profile" });
-  }
-});
-
-app.patch('/api/issues/:id/resolve', authorizeRole('admin'), async (req, res) => {
-  try {
-    const db = getDbPool();
-    if (!db) {
-      return res.status(503).json({ success: false, error: 'Database connection not available.' });
-    }
-
-    const issueId = req.params.id;
-    const connection = await db.getConnection();
-    
-    try {
-      await connection.beginTransaction();
-
-      // Check if issue exists and get reporter_id
-      const [issues] = await connection.execute('SELECT reporter_id, status FROM issues WHERE id = ?', [issueId]) as any;
-      if (issues.length === 0) {
-        await connection.rollback();
-        connection.release();
-        return res.status(404).json({ success: false, error: 'Issue not found' });
-      }
-
-      const issue = issues[0];
-      if (issue.status === 'Resolved') {
-          await connection.rollback();
-          connection.release();
-          return res.status(400).json({ success: false, error: 'Issue already resolved' });
-      }
-
-      // Update status to Resolved
-      await connection.execute('UPDATE issues SET status = "Resolved" WHERE id = ?', [issueId]);
-
-      // Add 50 points to reporter
-      if (issue.reporter_id) {
-        await connection.execute('UPDATE users SET points_balance = points_balance + 50 WHERE id = ?', [issue.reporter_id]);
-      }
-
-      await connection.commit();
-      connection.release();
-      res.json({ success: true, message: 'Issue Resolved! 50 Points awarded to the reporter.', status: 'Resolved' });
-    } catch (err) {
-      await connection.rollback();
-      connection.release();
-      throw err;
-    }
-  } catch (error) {
-    console.error("Error resolving issue:", error);
-    res.status(500).json({ success: false, error: "Failed to resolve issue" });
   }
 });
 

@@ -60,10 +60,18 @@ import { Register } from './auth/Register';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ReportIssue } from './citizen/ReportIssue';
 import { CitizenDashboard } from './citizen/CitizenDashboard';
+import { AdminDashboard } from './admin/AdminDashboard';
 
 function MainApp() {
   const { user: currentUser, logout, isAuthenticated } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
   const [activeTab, setActiveTab] = useState<'report' | 'dashboard' | 'profile'>('dashboard');
+
+  useEffect(() => {
+    if (isAdmin && activeTab === 'report') {
+      setActiveTab('dashboard');
+    }
+  }, [isAdmin, activeTab]);
 
   // Profile State
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -71,198 +79,6 @@ function MainApp() {
 
   const handleLogout = () => {
     logout();
-  };
-
-  const isAdmin = currentUser?.role === 'admin';
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
-  const [locationStatus, setLocationStatus] = useState<string>('Detecting location...');
-  const [result, setResult] = useState<{ category: string, severity: string, description: string } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Dashboard State
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-  const [dashboardError, setDashboardError] = useState<string | null>(null);
-  
-  // Filter & Sort State
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('All');
-  const [selectedStatus, setSelectedStatus] = useState<'Pending' | 'Resolved' | 'All'>('Pending');
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'most-upvotes'>('most-upvotes');
-  const categories = ['All', 'Pothole', 'Streetlight', 'Leak', 'Garbage', 'Other'];
-  const severities = ['All', 'High', 'Medium', 'Low'];
-
-  useEffect(() => {
-    if (activeTab === 'report') {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setLocation({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            });
-            setLocationStatus('Location captured');
-          },
-          (error) => {
-            console.warn('Geolocation blocked or failed:', error);
-            setLocationStatus('Location disabled');
-          }
-        );
-      } else {
-        setLocationStatus('Location not supported');
-      }
-    } else if (activeTab === 'dashboard') {
-      fetchIssues();
-    } else if (activeTab === 'profile') {
-      fetchProfile();
-    }
-  }, [activeTab]);
-
-  const fetchProfile = async () => {
-    setProfileLoading(true);
-    try {
-      const response = await axios.get('/api/users/me');
-      if (response.data.success) {
-        setUserProfile(response.data.data);
-      }
-    } catch (err: any) {
-      if (err.response?.status !== 401) console.error(err);
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
-  const fetchIssues = async () => {
-    setDashboardLoading(true);
-    setDashboardError(null);
-    try {
-      const response = await axios.get('/api/issues');
-      if (response.data.success) {
-        setIssues(response.data.data);
-      } else {
-        setDashboardError('Failed to fetch issues.');
-      }
-    } catch (err: any) {
-      if (err.response?.status !== 401) console.error(err);
-      setDashboardError('Database cannot be reached or is not configured.');
-    } finally {
-      setDashboardLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this issue?')) {
-      try {
-        const response = await axios.delete(`/api/issues/${id}`);
-        if (response.data.success) {
-          setIssues(prevIssues => prevIssues.filter(issue => issue.id !== id));
-        } else {
-          alert('Failed to delete issue.');
-        }
-      } catch (err: any) {
-        if (err.response?.status !== 401) console.error(err);
-        alert('An error occurred while deleting the issue.');
-      }
-    }
-  };
-
-  const handleUpvote = async (id: number) => {
-    try {
-      await axios.post(`/api/issues/${id}/upvote`);
-      fetchIssues();
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to upvote');
-    }
-  };
-
-  const handleResolve = async (id: number) => {
-    try {
-      const response = await axios.patch(`/api/issues/${id}/resolve`);
-      if (response.data.success) {
-        setIssues(prevIssues => prevIssues.map(issue => 
-          issue.id === id ? { ...issue, status: 'Resolved' } : issue
-        ));
-        alert('Issue Resolved! 50 Points awarded to the reporter.');
-      } else {
-        alert(response.data.error || 'Failed to update status.');
-      }
-    } catch (err: any) {
-      if (err.response?.status !== 401) console.error(err);
-      alert(err.response?.data?.error || 'An error occurred while resolving the issue.');
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
-      setResult(null);
-      setError(null);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const selectedFile = e.dataTransfer.files[0];
-      if (selectedFile.type.startsWith('image/')) {
-        setFile(selectedFile);
-        setPreviewUrl(URL.createObjectURL(selectedFile));
-        setResult(null);
-        setError(null);
-      } else {
-        setError('Please drop an image file.');
-      }
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!file) return;
-
-    setLoading(true);
-    setError(null);
-
-    const formData = new FormData();
-    formData.append('image', file);
-    if (location) {
-      formData.append('latitude', location.lat.toString());
-      formData.append('longitude', location.lng.toString());
-    }
-
-    try {
-      const response = await axios.post('/api/issues', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      if (response.data.success) {
-        setResult(response.data.data);
-      } else {
-        setError('Server returned an error.');
-      }
-    } catch (err: any) {
-      if (err.response?.status !== 401) console.error(err);
-      setError('Failed to submit report. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const severityColor = (severity: string) => {
-    switch(severity?.toLowerCase()) {
-      case 'high': return 'bg-red-100 text-red-700 border-red-200 font-bold';
-      case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200 font-bold';
-      case 'low': return 'bg-green-100 text-green-700 border-green-200 font-bold';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200 font-bold';
-    }
   };
 
   const renderActiveView = () => {
@@ -277,7 +93,7 @@ function MainApp() {
     if (activeTab === 'dashboard') {
       return (
         <ProtectedRoute user={currentUser}>
-          <CitizenDashboard />
+          {isAdmin ? <AdminDashboard /> : <CitizenDashboard />}
         </ProtectedRoute>
       );
     }
@@ -347,14 +163,16 @@ function MainApp() {
             </div>
             
             <div className="flex bg-slate-950 p-1 rounded-xl">
-              <button
-                onClick={() => setActiveTab('report')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === 'report' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Report Issue
-              </button>
+              {!isAdmin && (
+                <button
+                  onClick={() => setActiveTab('report')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'report' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Report Issue
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('dashboard')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${

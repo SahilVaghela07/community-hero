@@ -47,12 +47,12 @@ export const ReportIssue: React.FC = () => {
 
     try {
       const response = await axios.post('/api/issues', {
-        // We do not send the massive base64 file here to avoid DB limits, 
-        // the backend will auto-generate a placeholder based on type.
         photo_url: '',
         description,
         type,
         reporter_id: user?.id,
+        latitude: 37.7749 + (Math.random() * 0.01 - 0.005),
+        longitude: -122.4194 + (Math.random() * 0.01 - 0.005)
       });
 
       if (response.data.success) {

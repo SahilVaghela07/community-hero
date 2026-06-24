@@ -62,6 +62,7 @@ export const ReportIssue: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (!description || !type) return;
 
     if (!file) {

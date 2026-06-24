@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Loader2, AlertTriangle, MapPin, Play, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertTriangle, MapPin, Play, CheckCircle2, Download } from 'lucide-react';
 
 interface Issue {
   id: number;
@@ -52,6 +52,44 @@ export const AdminDashboard: React.FC = () => {
       window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
     } else {
       alert('Location data is not available for this issue.');
+    }
+  };
+
+  const exportToCSV = async () => {
+    try {
+      const response = await axios.get('/api/issues?all=true&limit=10000');
+      if (response.data.success) {
+        const data = response.data.data;
+        if (data.length === 0) {
+          alert('No issues to export');
+          return;
+        }
+
+        const headers = Object.keys(data[0]).join(',');
+        
+        const rows = data.map((row: any) => {
+          return Object.values(row).map((val: any) => {
+            if (typeof val === 'string') {
+              return `"${val.replace(/"/g, '""')}"`;
+            }
+            return val;
+          }).join(',');
+        });
+
+        const csvContent = [headers, ...rows].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `issues_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to export CSV');
     }
   };
 
@@ -143,9 +181,18 @@ export const AdminDashboard: React.FC = () => {
     <div className="w-full max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 px-4 mt-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-white">Ticket Lifecycle Board</h2>
-        <button onClick={fetchIssues} className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
-          Refresh Board
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={exportToCSV} 
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors text-sm font-medium"
+          >
+            <Download className="w-4 h-4" />
+            Export to CSV
+          </button>
+          <button onClick={fetchIssues} className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
+            Refresh Board
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-6 overflow-x-auto pb-4">

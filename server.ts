@@ -480,6 +480,35 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
+app.patch('/api/users/me', authenticateToken, async (req, res) => {
+  try {
+    const userPayload = (req as any).user;
+    if (!userPayload || userPayload.id === 0) {
+      return res.status(403).json({ success: false, error: 'Cannot edit this profile' });
+    }
+    
+    const { name } = req.body;
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Invalid name provided' });
+    }
+
+    const db = getDbPool();
+    if (db) {
+      const [result] = await db.execute('UPDATE users SET name = ? WHERE id = ?', [name.trim(), userPayload.id]) as any;
+      if (result.affectedRows > 0) {
+        res.json({ success: true, message: 'Profile updated' });
+      } else {
+        res.status(404).json({ success: false, error: 'User not found' });
+      }
+    } else {
+      res.status(503).json({ success: false, error: 'Database connection not available.' });
+    }
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ success: false, error: "Failed to update user profile" });
+  }
+});
+
 app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
     const userPayload = (req as any).user;

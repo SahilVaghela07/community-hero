@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Loader2, AlertTriangle, ArrowUpCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowUpCircle, CheckCircle2, Search } from 'lucide-react';
 
 interface Issue {
   id: number;
@@ -18,6 +18,8 @@ export const CitizenDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'upvotes'>('newest');
   const limit = 10;
 
   useEffect(() => {
@@ -68,13 +70,52 @@ export const CitizenDashboard: React.FC = () => {
     );
   }
 
+  const filteredIssues = issues.filter(issue => 
+    issue.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    issue.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const sortedIssues = [...filteredIssues].sort((a, b) => {
+    if (sortBy === 'newest') {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    } else if (sortBy === 'oldest') {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    } else if (sortBy === 'upvotes') {
+      return (b.upvote_count || 0) - (a.upvote_count || 0);
+    }
+    return 0;
+  });
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h2 className="text-2xl font-semibold text-white">Pending Issues</h2>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative w-full sm:w-auto">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-slate-500" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search issues..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:w-64 bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-10 p-2.5 placeholder-slate-500"
+            />
+          </div>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest' | 'upvotes')}
+            className="w-full sm:w-auto bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+          >
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="upvotes">Most Upvoted</option>
+          </select>
+        </div>
       </div>
 
-      {issues.length === 0 ? (
+      {sortedIssues.length === 0 ? (
         <div className="text-center bg-slate-900 border border-slate-800 rounded-3xl py-20 px-4">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
           <h3 className="text-xl font-medium text-white mb-2">All clean!</h3>
@@ -82,7 +123,7 @@ export const CitizenDashboard: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {issues.map(issue => (
+          {sortedIssues.map(issue => (
             <div key={issue.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-full hover:border-slate-700 transition-colors">
               <div className="flex justify-between items-start mb-4">
                 <span className="px-3 py-1 bg-slate-800 text-slate-300 border border-slate-700 rounded-full text-xs font-semibold uppercase tracking-wider">

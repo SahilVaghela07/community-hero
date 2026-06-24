@@ -222,6 +222,7 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
 });
 
 app.post('/api/issues', authenticateToken, async (req, res) => {
+  console.log("POST /api/issues payload:", req.body);
   try {
     const { photo_url, description, type, reporter_id, latitude, longitude } = req.body;
     const userId = (req as any).user?.id || reporter_id;
@@ -230,8 +231,8 @@ app.post('/api/issues', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Description and type are required.' });
     }
 
-    const finalLat = latitude !== undefined && latitude !== null ? latitude : 0.0;
-    const finalLng = longitude !== undefined && longitude !== null ? longitude : 0.0;
+    const finalLat = latitude !== undefined && latitude !== null && latitude !== '' ? Number(latitude) : 0.0000;
+    const finalLng = longitude !== undefined && longitude !== null && longitude !== '' ? Number(longitude) : 0.0000;
 
     const db = getDbPool();
     if (db) {

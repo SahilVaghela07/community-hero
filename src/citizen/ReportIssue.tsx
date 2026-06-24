@@ -64,6 +64,11 @@ export const ReportIssue: React.FC = () => {
     e.preventDefault();
     if (!description || !type) return;
 
+    if (!location) {
+      setError('Location is required. Please ensure GPS is active and grant permissions.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);

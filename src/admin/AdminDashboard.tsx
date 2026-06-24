@@ -101,7 +101,13 @@ export const AdminDashboard: React.FC = () => {
               </span>
             </div>
 
-            <p className="text-slate-300 text-sm leading-relaxed">
+            {issue.photo_url && (
+              <div className="rounded-lg overflow-hidden bg-slate-900 border border-slate-700 h-32 relative shrink-0 mt-2">
+                <img src={issue.photo_url} alt="Issue" className="w-full h-full object-cover" />
+              </div>
+            )}
+
+            <p className="text-slate-300 text-sm leading-relaxed mt-2">
               {issue.description}
             </p>
 

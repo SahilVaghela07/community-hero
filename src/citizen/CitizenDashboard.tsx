@@ -94,7 +94,7 @@ export const CitizenDashboard: React.FC = () => {
               </div>
 
               {issue.photo_url && (
-                <div className="mb-4 aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 relative">
+                <div className="mb-4 h-48 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 relative shrink-0">
                   <img src={issue.photo_url} alt="Issue" className="w-full h-full object-cover" />
                 </div>
               )}

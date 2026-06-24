@@ -64,6 +64,11 @@ export const ReportIssue: React.FC = () => {
     e.preventDefault();
     if (!description || !type) return;
 
+    if (!file) {
+      setError('Please attach a photo of the issue to proceed.');
+      return;
+    }
+
     if (!location) {
       setError('Location is required. Please ensure GPS is active and grant permissions.');
       return;
@@ -73,9 +78,18 @@ export const ReportIssue: React.FC = () => {
     setError(null);
     setSuccess(null);
 
+    const toBase64 = (f: File) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(f);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+
     try {
+      const base64Photo = await toBase64(file);
+
       const response = await axios.post('/api/issues', {
-        photo_url: '',
+        photo_url: base64Photo,
         description,
         type,
         reporter_id: user?.id,

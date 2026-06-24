@@ -61,6 +61,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ReportIssue } from './citizen/ReportIssue';
 import { CitizenDashboard } from './citizen/CitizenDashboard';
 import { AdminDashboard } from './admin/AdminDashboard';
+import { NotificationBell } from './components/NotificationBell';
 
 function MainApp() {
   const { user: currentUser, logout, isAuthenticated } = useAuth();
@@ -182,7 +183,8 @@ function MainApp() {
               <span className="font-semibold text-white tracking-tight">Community Hero</span>
             </div>
             
-            <div className="flex bg-slate-950 p-1 rounded-xl">
+            <div className="flex bg-slate-950 p-1 rounded-xl items-center">
+              {!isAdmin && <NotificationBell />}
               {!isAdmin && (
                 <button
                   onClick={() => setActiveTab('report')}

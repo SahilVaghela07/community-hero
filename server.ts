@@ -227,14 +227,19 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
   }
 });
 
-app.post('/api/issues', authenticateToken, async (req, res) => {
+app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, res) => {
   console.log("POST /api/issues payload:", req.body);
   try {
-    const { photo_url, description, type, reporter_id, latitude, longitude } = req.body;
+    const { description, type, reporter_id, latitude, longitude } = req.body;
     const userId = (req as any).user?.id || reporter_id;
 
     if (!description || !type) {
       return res.status(400).json({ error: 'Description and type are required.' });
+    }
+
+    let finalPhotoUrl = 'https://placehold.co/400x300?text=' + encodeURIComponent(type);
+    if (req.file) {
+      finalPhotoUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     const finalLat = latitude !== undefined && latitude !== null && latitude !== '' ? Number(latitude) : 0.0000;
@@ -250,7 +255,7 @@ app.post('/api/issues', authenticateToken, async (req, res) => {
             'Medium', // Default severity
             description, 
             userId,
-            photo_url || 'https://placehold.co/400x300?text=' + encodeURIComponent(type),
+            finalPhotoUrl,
             finalLat,
             finalLng
           ]

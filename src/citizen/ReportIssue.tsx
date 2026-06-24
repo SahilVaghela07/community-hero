@@ -78,23 +78,21 @@ export const ReportIssue: React.FC = () => {
     setError(null);
     setSuccess(null);
 
-    const toBase64 = (f: File) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(f);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-
     try {
-      const base64Photo = await toBase64(file);
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('description', description);
+      formData.append('type', type);
+      if (user?.id) {
+        formData.append('reporter_id', String(user.id));
+      }
+      formData.append('latitude', String(location.lat || 0.0000));
+      formData.append('longitude', String(location.lng || 0.0000));
 
-      const response = await axios.post('/api/issues', {
-        photo_url: base64Photo,
-        description,
-        type,
-        reporter_id: user?.id,
-        latitude: location?.lat || null,
-        longitude: location?.lng || null
+      const response = await axios.post('/api/issues', formData, {
+        headers: {
+          // Do not manually set Content-Type to application/json or multipart/form-data. Let browser handle the boundary.
+        }
       });
 
       if (response.data.success) {
@@ -108,7 +106,7 @@ export const ReportIssue: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setError('Failed to submit report. Please try again.');
+      setError('Error: ' + (err.message || 'Failed to submit report. Please try again.'));
     } finally {
       setLoading(false);
     }

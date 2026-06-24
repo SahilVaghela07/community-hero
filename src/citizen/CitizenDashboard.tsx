@@ -17,19 +17,19 @@ export const CitizenDashboard: React.FC = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const limit = 10;
 
   useEffect(() => {
     fetchIssues();
-  }, []);
+  }, [page]);
 
   const fetchIssues = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/issues');
-      // Filter only Pending items if "pending issues" is what the requirements state
-      // Provide a more complete view but focus on pending usually 
+      const response = await axios.get(`/api/issues?limit=${limit}&offset=${page * limit}`);
       if (response.data.success) {
-        setIssues(response.data.data.filter((i: Issue) => i.status !== 'Resolved'));
+        setIssues(response.data.data);
       }
     } catch (err) {
       console.error(err);
@@ -120,6 +120,27 @@ export const CitizenDashboard: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && !error && (
+        <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-800">
+          <button
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium text-sm"
+          >
+            Previous
+          </button>
+          <span className="text-slate-400 text-sm font-medium">Page {page + 1}</span>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={issues.length < limit}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium text-sm"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

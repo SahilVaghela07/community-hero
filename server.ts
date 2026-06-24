@@ -340,7 +340,17 @@ app.get('/api/issues', async (req, res) => {
   try {
     const db = getDbPool();
     if (db) {
-      const [rows] = await db.query('SELECT * FROM issues ORDER BY created_at DESC');
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const includeCompleted = req.query.all === 'true';
+
+      let query = 'SELECT * FROM issues';
+      if (!includeCompleted) {
+        query += ' WHERE status != "Completed"';
+      }
+      query += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+
+      const [rows] = await db.query(query);
       res.json({ success: true, data: rows });
     } else {
       res.status(503).json({ success: false, error: 'Database connection not available.' });
@@ -411,7 +421,7 @@ app.patch('/api/issues/:id/status', authorizeRole('admin'), async (req, res) => 
           await connection.execute('UPDATE users SET points_balance = points_balance + 50 WHERE id = ?', [issue.reporter_id]);
           await connection.execute(
             'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
-            [issue.reporter_id, 'Great news! Your report has been resolved. You have earned 50 reward points!']
+            [issue.reporter_id, 'Task Completed! You have earned 50 points.']
           );
           console.log(`Inserted notification for user ${issue.reporter_id}`);
           message = 'Issue Completed! 50 Points awarded to the reporter.';

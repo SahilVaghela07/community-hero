@@ -26,7 +26,7 @@ export const AdminDashboard: React.FC = () => {
   const fetchIssues = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/issues');
+      const response = await axios.get('/api/issues?all=true&limit=100');
       if (response.data.success) {
         setIssues(response.data.data);
       }

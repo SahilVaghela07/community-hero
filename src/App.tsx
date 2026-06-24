@@ -301,22 +301,24 @@ function MainApp() {
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-1">{userProfile.name}</h3>
                 <p className="text-slate-400 mb-2 font-medium capitalize">{userProfile.role} Contributor</p>
-                <div className="text-sm text-slate-500 mb-8">{userProfile.email}</div>
+                <div className={`text-sm text-slate-500 ${userProfile.role !== 'admin' ? 'mb-8' : 'mb-4'}`}>{userProfile.email}</div>
                 
-                <div className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Points Wallet</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-xl">
-                      <CheckCircle2 className="w-8 h-8" />
+                {userProfile.role !== 'admin' && (
+                  <div className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Points Wallet</p>
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-xl">
+                        <CheckCircle2 className="w-8 h-8" />
+                      </div>
+                      <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 tracking-tighter">
+                        {userProfile.points_balance}
+                      </span>
                     </div>
-                    <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 tracking-tighter">
-                      {userProfile.points_balance}
-                    </span>
+                    <p className="text-sm text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
+                      Points earned by helping keep the community safe.
+                    </p>
                   </div>
-                  <p className="text-sm text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
-                    Points earned by helping keep the community safe.
-                  </p>
-                </div>
+                )}
               </div>
             ) : (
               <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-center">

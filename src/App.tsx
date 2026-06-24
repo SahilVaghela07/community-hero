@@ -73,6 +73,26 @@ function MainApp() {
     }
   }, [isAdmin, activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'profile') {
+      fetchProfile();
+    }
+  }, [activeTab]);
+
+  const fetchProfile = async () => {
+    setProfileLoading(true);
+    try {
+      const response = await axios.get('/api/users/me');
+      if (response.data.success) {
+        setUserProfile(response.data.data);
+      }
+    } catch (err: any) {
+      if (err.response?.status !== 401) console.error(err);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   // Profile State
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);

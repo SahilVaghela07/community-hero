@@ -16,6 +16,29 @@ export const ReportIssue: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<string>('Detecting location...');
+
+  React.useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setLocationStatus('Location Captured');
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+          setLocationStatus('Location Disabled');
+        }
+      );
+    } else {
+      setLocationStatus('Location Not Supported');
+    }
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -51,8 +74,8 @@ export const ReportIssue: React.FC = () => {
         description,
         type,
         reporter_id: user?.id,
-        latitude: 37.7749 + (Math.random() * 0.01 - 0.005),
-        longitude: -122.4194 + (Math.random() * 0.01 - 0.005)
+        latitude: location?.lat || null,
+        longitude: location?.lng || null
       });
 
       if (response.data.success) {
@@ -160,7 +183,7 @@ export const ReportIssue: React.FC = () => {
           {/* Location Indicator */}
           <div className="flex items-center gap-3 text-sm text-slate-400 bg-slate-950/50 p-4 rounded-xl border border-slate-800/50 mt-2">
             <MapPin className="w-5 h-5 text-blue-500" />
-            <span className="flex-1">Location Captured Automatically</span>
+            <span className="flex-1">{locationStatus}</span>
             <span className="font-mono text-xs opacity-70 bg-slate-900 px-2 py-1 rounded-md border border-slate-800">
               GPS Active
             </span>

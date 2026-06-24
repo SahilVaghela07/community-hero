@@ -230,6 +230,9 @@ app.post('/api/issues', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Description and type are required.' });
     }
 
+    const finalLat = latitude !== undefined && latitude !== null ? latitude : 0.0;
+    const finalLng = longitude !== undefined && longitude !== null ? longitude : 0.0;
+
     const db = getDbPool();
     if (db) {
       try {
@@ -241,8 +244,8 @@ app.post('/api/issues', authenticateToken, async (req, res) => {
             description, 
             userId,
             photo_url || 'https://placehold.co/400x300?text=' + encodeURIComponent(type),
-            latitude || null,
-            longitude || null
+            finalLat,
+            finalLng
           ]
         );
       } catch (dbError) {

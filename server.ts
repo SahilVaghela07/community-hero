@@ -86,6 +86,11 @@ async function initDb() {
       } catch (e) {
         // Ignored if already exists
       }
+      try {
+        await db.query('ALTER TABLE issues ADD COLUMN latitude DECIMAL(10, 8), ADD COLUMN longitude DECIMAL(11, 8)');
+      } catch (e) {
+        // Ignored if already exists
+      }
       await db.query(`
         CREATE TABLE IF NOT EXISTS upvotes (
           user_id INT,

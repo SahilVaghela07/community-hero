@@ -1,15 +1,18 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../auth/AuthContext';
-import { Camera, AlertTriangle, Loader2, UploadCloud, MapPin, CheckCircle2 } from 'lucide-react';
+import { Camera, AlertTriangle, Loader2, UploadCloud, MapPin, CheckCircle2, Mic } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const ReportIssue: React.FC = () => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [description, setDescription] = useState('');
   const [type, setType] = useState('Pothole');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
 
   // File Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +61,45 @@ export const ReportIssue: React.FC = () => {
       setFile(droppedFile);
       setPreviewUrl(URL.createObjectURL(droppedFile));
     }
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    if (i18n.language === 'hi') {
+      recognition.lang = 'hi-IN';
+    } else if (i18n.language === 'gu') {
+      recognition.lang = 'gu-IN';
+    } else {
+      recognition.lang = 'en-US';
+    }
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setDescription((prev) => prev + (prev ? ' ' : '') + transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error', event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,7 +213,7 @@ export const ReportIssue: React.FC = () => {
 
           <div className="grid sm:grid-cols-2 gap-6">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Issue Type</label>
+              <label className="block text-sm font-medium text-slate-400 mb-2">{t("Type of Issue")}</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
@@ -186,7 +228,22 @@ export const ReportIssue: React.FC = () => {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-400 mb-2">Description</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-400">{t("Issue Description")}</label>
+                <button
+                  type="button"
+                  onClick={startListening}
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
+                    isListening 
+                      ? 'bg-rose-500/10 text-rose-500 border border-rose-500/30' 
+                      : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                  }`}
+                  title="Voice to text"
+                >
+                  <Mic className={`w-3.5 h-3.5 ${isListening ? 'animate-pulse' : ''}`} />
+                  {isListening ? t("Listening...") : "Dictate"}
+                </button>
+              </div>
               <textarea
                 required
                 rows={3}
@@ -219,7 +276,7 @@ export const ReportIssue: React.FC = () => {
               </>
             ) : (
               <>
-                Submit Report
+                {t("Submit Report")}
               </>
             )}
           </button>

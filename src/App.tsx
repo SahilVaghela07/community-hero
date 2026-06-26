@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import axios from 'axios';
-import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2, CheckCircle2, Circle, User, ShieldAlert, LogIn, ArrowUpCircle, Edit2, X } from 'lucide-react';
+import { Camera, MapPin, AlertTriangle, CheckCircle, UploadCloud, Loader2, Info, LayoutDashboard, Calendar, Trash2, CheckCircle2, Circle, User, ShieldAlert, LogIn, ArrowUpCircle, Edit2, X, Sun, Moon } from 'lucide-react';
 
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
@@ -41,10 +41,14 @@ import { AdminDashboard } from './admin/AdminDashboard';
 import { NotificationBell } from './components/NotificationBell';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
+import { useTranslation } from 'react-i18next';
+
 function MainNav() {
   const { user: currentUser, logout } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <nav className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
@@ -54,10 +58,17 @@ function MainNav() {
             <div className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
               <Camera className="w-5 h-5" />
             </div>
-            <span className="font-semibold text-white tracking-tight">Community Hero</span>
+            <span className="font-semibold text-white tracking-tight">{t("Community Hero")}</span>
           </div>
           
           <div className="flex bg-slate-950 p-1 rounded-xl items-center">
+            <button
+              onClick={toggleTheme}
+              className="px-3 py-2 rounded-lg text-slate-400 hover:text-white transition-colors"
+              title="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             {!isAdmin && <NotificationBell />}
             {!isAdmin && (
               <Link
@@ -66,7 +77,7 @@ function MainNav() {
                   location.pathname === '/report' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Report Issue
+                {t("Report Issue")}
               </Link>
             )}
             <Link
@@ -75,7 +86,7 @@ function MainNav() {
                 location.pathname === '/dashboard' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {isAdmin ? 'Admin Dashboard' : 'Dashboard'}
+              {isAdmin ? t("Admin Dashboard") : t("Dashboard")}
             </Link>
             <Link
               to="/profile"
@@ -83,13 +94,13 @@ function MainNav() {
                 location.pathname === '/profile' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Profile
+              {t("Profile")}
             </Link>
             <button
               onClick={logout}
               className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-rose-400 transition-colors ml-2"
             >
-              Logout
+              {t("Logout")}
             </button>
           </div>
         </div>
@@ -105,6 +116,14 @@ function ProfileView() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  
+  const { t, i18n } = useTranslation();
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const lang = e.target.value;
+    i18n.changeLanguage(lang);
+    localStorage.setItem('appLanguage', lang);
+  };
 
   useEffect(() => {
     fetchProfile();
@@ -146,7 +165,7 @@ function ProfileView() {
     <div className="w-full max-w-md mx-auto space-y-8 animate-in fade-in duration-500 mt-8">
       <h2 className="text-2xl font-semibold text-white flex items-center gap-2 mb-6">
         <User className="w-6 h-6 text-blue-400" />
-        My Profile
+        {t("My Profile")}
       </h2>
       
       {profileLoading ? (
@@ -162,6 +181,21 @@ function ProfileView() {
           <p className="text-slate-400 mb-2 font-medium capitalize">{userProfile.role} Contributor</p>
           <div className="text-sm text-slate-500 mb-6">{userProfile.email}</div>
           
+          <div className="w-full mb-6">
+            <label className="block text-sm font-medium text-slate-400 mb-2 text-left">
+              {t("Language")}
+            </label>
+            <select
+              value={i18n.language}
+              onChange={handleLanguageChange}
+              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none"
+            >
+              <option value="en">{t("English")}</option>
+              <option value="hi">{t("Hindi")}</option>
+              <option value="gu">{t("Gujarati")}</option>
+            </select>
+          </div>
+          
           {userProfile.id !== 0 && (
             <button
               onClick={() => {
@@ -171,13 +205,13 @@ function ProfileView() {
               className={`flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors text-sm font-medium ${userProfile.role !== 'admin' ? 'mb-8' : 'mb-4'}`}
             >
               <Edit2 className="w-4 h-4" />
-              Edit Profile
+              {t("Edit Profile")}
             </button>
           )}
           
           {userProfile.role !== 'admin' && (
             <div className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Points Wallet</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">{t("Points Wallet")}</p>
               <div className="flex items-center justify-center gap-3">
                 <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-xl">
                   <CheckCircle2 className="w-8 h-8" />
@@ -187,7 +221,7 @@ function ProfileView() {
                 </span>
               </div>
               <p className="text-sm text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
-                Points earned by helping keep the community safe.
+                {t("Points earned by helping keep the community safe.")}
               </p>
             </div>
           )}
@@ -332,10 +366,33 @@ function AppRouter() {
   );
 }
 
+export const ThemeContext = React.createContext<{ theme: 'dark' | 'light', toggleTheme: () => void }>({ theme: 'dark', toggleTheme: () => {} });
+
+export function useTheme() {
+  return React.useContext(ThemeContext);
+}
+
 export default function App() {
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    } else {
+      document.documentElement.classList.remove('light-theme');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+
   return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </ThemeContext.Provider>
   );
 }

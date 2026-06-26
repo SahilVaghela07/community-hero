@@ -10,14 +10,38 @@ interface RegisterProps {
 export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'citizen' | 'admin'>('citizen');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
 
+  const validateEmail = (emailStr: string) => {
+    if (!emailStr) {
+      setEmailError(null);
+      return true;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailStr)) {
+      setEmailError('Please enter a valid email address');
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setEmail(val);
+    validateEmail(val);
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateEmail(email)) {
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -73,10 +97,13 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
               type="email" 
               required 
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              onChange={handleEmailChange}
+              className={`w-full bg-slate-950 border ${emailError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-800 focus:border-blue-500 focus:ring-blue-500'} rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-1 transition-colors`}
               placeholder="you@example.com"
             />
+            {emailError && (
+              <p className="mt-2 text-sm text-rose-500">{emailError}</p>
+            )}
           </div>
           
           <div>

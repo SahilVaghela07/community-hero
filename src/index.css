@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+@layer base {
+  .light-theme {
+    --color-slate-950: var(--color-slate-50);
+    --color-slate-900: var(--color-slate-100);
+    --color-slate-800: var(--color-slate-200);
+    --color-slate-700: var(--color-slate-300);
+    --color-slate-500: var(--color-slate-600);
+    --color-slate-400: var(--color-slate-700);
+    --color-slate-300: var(--color-slate-800);
+    --color-slate-200: var(--color-slate-900);
+    --color-white: var(--color-slate-950);
+    --color-black: #ffffff; 
+
+    --color-blue-400: var(--color-blue-600);
+    --color-blue-500: var(--color-blue-600);
+    --color-red-400: var(--color-red-600);
+    --color-red-500: var(--color-red-600);
+    --color-rose-400: var(--color-rose-600);
+    --color-rose-500: var(--color-rose-600);
+    --color-yellow-400: var(--color-yellow-600);
+    --color-yellow-500: var(--color-yellow-600);
+  }
+
+  .light-theme .text-white {
+    color: var(--color-slate-900);
+  }
+}

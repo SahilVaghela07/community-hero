@@ -147,6 +147,14 @@ function authorizeRole(role: string) {
   };
 }
 
+const isAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const user = (req as any).user;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ error: 'Access Denied: Admin role required' });
+  }
+  next();
+};
+
 // Optional Auth Middleware for endpoints that don't enforce a role but need user data
 function authenticateToken(req: express.Request, res: express.Response, next: express.NextFunction) {
   const authHeader = req.headers.authorization;
@@ -380,7 +388,7 @@ app.delete('/api/issues/:id', authorizeRole('admin'), async (req, res) => {
   }
 });
 
-app.patch('/api/issues/:id/status', authorizeRole('admin'), async (req, res) => {
+app.patch('/api/issues/:id/status', authenticateToken, isAdmin, async (req, res) => {
   try {
     const db = getDbPool();
     if (!db) {

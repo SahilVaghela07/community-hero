@@ -25,7 +25,17 @@ const resources = {
       "Type of Issue": "Type of Issue",
       "Location": "Location",
       "Submit Report": "Submit Report",
-      "Listening...": "Listening..."
+      "Listening...": "Listening...",
+      "dashboard.title": "Ticket Lifecycle Board",
+      "dashboard.pending": "Pending",
+      "dashboard.startWork": "Start Work",
+      "dashboard.working": "Working",
+      "dashboard.completeWork": "Complete",
+      "dashboard.completed": "Completed",
+      "dashboard.exportCSV": "Export to CSV",
+      "dashboard.refreshBoard": "Refresh Board",
+      "dashboard.viewLocation": "View Location on Map",
+      "dashboard.noIssues": "No issues in this column."
     }
   },
   hi: {
@@ -51,7 +61,17 @@ const resources = {
       "Type of Issue": "समस्या का प्रकार",
       "Location": "स्थान",
       "Submit Report": "रिपोर्ट जमा करें",
-      "Listening...": "सुन रहा हूँ..."
+      "Listening...": "सुन रहा हूँ...",
+      "dashboard.title": "टिकट जीवनचक्र बोर्ड",
+      "dashboard.pending": "लंबित",
+      "dashboard.startWork": "काम शुरू करें",
+      "dashboard.working": "काम चालू है",
+      "dashboard.completeWork": "पूरा करें",
+      "dashboard.completed": "पूर्ण",
+      "dashboard.exportCSV": "CSV में निर्यात करें",
+      "dashboard.refreshBoard": "बोर्ड रीफ्रेश करें",
+      "dashboard.viewLocation": "मानचित्र पर स्थान देखें",
+      "dashboard.noIssues": "इस कॉलम में कोई समस्या नहीं है।"
     }
   },
   gu: {
@@ -77,7 +97,17 @@ const resources = {
       "Type of Issue": "સમસ્યાનો પ્રકાર",
       "Location": "સ્થાન",
       "Submit Report": "રિપોર્ટ સબમિટ કરો",
-      "Listening...": "સાંભળી રહ્યું છે..."
+      "Listening...": "સાંભળી રહ્યું છે...",
+      "dashboard.title": "ટિકિટ જીવનચક્ર બોર્ડ",
+      "dashboard.pending": "બાકી",
+      "dashboard.startWork": "કામ શરૂ કરો",
+      "dashboard.working": "કાર્ય ચાલુ છે",
+      "dashboard.completeWork": "પૂર્ણ કરો",
+      "dashboard.completed": "પૂર્ણ",
+      "dashboard.exportCSV": "CSV માં નિકાસ કરો",
+      "dashboard.refreshBoard": "બોર્ડ રિફ્રેશ કરો",
+      "dashboard.viewLocation": "નકશા પર સ્થાન જુઓ",
+      "dashboard.noIssues": "આ કૉલમમાં કોઈ સમસ્યા નથી."
     }
   }
 };

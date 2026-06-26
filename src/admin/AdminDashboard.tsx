@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Loader2, AlertTriangle, MapPin, Play, CheckCircle2, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Issue {
   id: number;
@@ -15,6 +16,7 @@ interface Issue {
 }
 
 export const AdminDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,14 +173,14 @@ export const AdminDashboard: React.FC = () => {
 
             <div className="flex items-center gap-1.5 text-xs text-blue-400 group-hover:text-blue-300 transition-colors w-fit p-1 -ml-1 rounded hover:bg-blue-500/10">
               <MapPin className="w-3.5 h-3.5" />
-              View Location on Map
+              {t("dashboard.viewLocation")}
             </div>
 
             {nextStatus && (
               <div className="pt-3 mt-1 border-t border-slate-700/50" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => updateStatus(issue.id, nextStatus)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-xs font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-slate-50 rounded-lg transition-colors text-xs font-medium"
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {nextStatusLabel}
@@ -190,7 +192,7 @@ export const AdminDashboard: React.FC = () => {
 
         {statusIssues.length === 0 && (
           <div className="text-center py-10 px-4 text-slate-500 text-sm">
-            No issues in this column.
+            {t("dashboard.noIssues")}
           </div>
         )}
       </div>
@@ -200,38 +202,38 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 px-4 mt-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-white">Ticket Lifecycle Board</h2>
+        <h2 className="text-2xl font-semibold text-slate-200">{t("dashboard.title")}</h2>
         <div className="flex items-center gap-4">
           <button 
             onClick={exportToCSV} 
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors text-sm font-medium"
           >
             <Download className="w-4 h-4" />
-            Export to CSV
+            {t("dashboard.exportCSV")}
           </button>
-          <button onClick={fetchIssues} className="text-sm font-medium text-slate-400 hover:text-white transition-colors">
-            Refresh Board
+          <button onClick={fetchIssues} className="text-sm font-medium text-slate-400 hover:text-slate-200 transition-colors">
+            {t("dashboard.refreshBoard")}
           </button>
         </div>
       </div>
 
       <div className="flex gap-6 overflow-x-auto pb-4">
         <Column 
-          title="Pending" 
+          title={t("dashboard.pending")} 
           statusIssues={pendingIssues} 
           nextStatus="Working" 
-          nextStatusLabel="Start Work" 
+          nextStatusLabel={t("dashboard.startWork")} 
           Icon={Play}
         />
         <Column 
-          title="Working" 
+          title={t("dashboard.working")} 
           statusIssues={workingIssues} 
           nextStatus="Completed" 
-          nextStatusLabel="Complete" 
+          nextStatusLabel={t("dashboard.completeWork")} 
           Icon={CheckCircle2}
         />
         <Column 
-          title="Completed" 
+          title={t("dashboard.completed")} 
           statusIssues={completedIssues} 
           nextStatus={null} 
           nextStatusLabel="" 

@@ -183,6 +183,7 @@ export const ReportIssue: React.FC = () => {
       }
       formData.append('latitude', String(location.lat || 0.0000));
       formData.append('longitude', String(location.lng || 0.0000));
+      formData.append('municipality_zone', 'FakeHackerCity');
 
       const response = await axios.post('/api/issues', formData, {
         headers: {

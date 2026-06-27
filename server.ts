@@ -109,11 +109,11 @@ async function initDb() {
         // Ignored if already exists
       }
       await db.query(`
-        CREATE TABLE IF NOT EXISTS upvotes (
+        CREATE TABLE IF NOT EXISTS issue_upvotes (
           user_id INT,
           issue_id INT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (user_id, issue_id)
+          UNIQUE KEY unique_user_issue (user_id, issue_id)
         );
       `);
       try {
@@ -389,14 +389,14 @@ app.post(['/api/issues/:id/upvote', '/api/upvote'], authenticateToken, async (re
 
       try {
         await connection.execute(
-          'INSERT INTO upvotes (user_id, issue_id) VALUES (?, ?)',
+          'INSERT INTO issue_upvotes (user_id, issue_id) VALUES (?, ?)',
           [userId, issueId]
         );
       } catch (err: any) {
         if (err.code === 'ER_DUP_ENTRY') {
           await connection.rollback();
           connection.release();
-          return res.status(400).json({ error: 'You have already upvoted this issue.' });
+          return res.status(400).json({ error: 'You have already voted on this issue.' });
         }
         throw err;
       }

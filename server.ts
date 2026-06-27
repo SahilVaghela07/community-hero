@@ -319,10 +319,28 @@ app.post('/api/analyze-image', authenticateToken, upload.single('photo'), async 
   }
 });
 
+async function getMunicipalityZone(lat: number, lng: number): Promise<string> {
+  if (lat === 0 && lng === 0) return 'Unknown';
+  
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`, {
+      headers: { 'User-Agent': 'CommunityHeroApp/1.0' }
+    });
+    const data = await response.json();
+    return data?.address?.city || data?.address?.town || data?.address?.county || data?.address?.state || 'Unknown';
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    // Mock fallback
+    if (lat >= 22.0 && lat <= 23.0 && lng >= 73.0 && lng <= 74.0) return 'Vadodara';
+    if (lat >= 21.0 && lat <= 22.5 && lng >= 71.0 && lng <= 72.5) return 'Botad';
+    return 'Unknown';
+  }
+}
+
 app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, res) => {
   console.log("POST /api/issues payload:", req.body);
   try {
-    const { description, type, reporter_id, latitude, longitude, municipality_zone } = req.body;
+    const { description, type, reporter_id, latitude, longitude } = req.body;
     const userId = (req as any).user?.id || reporter_id;
 
     if (!description || !type) {
@@ -337,6 +355,8 @@ app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, r
     const finalLat = latitude !== undefined && latitude !== null && latitude !== '' ? Number(latitude) : 0.0000;
     const finalLng = longitude !== undefined && longitude !== null && longitude !== '' ? Number(longitude) : 0.0000;
 
+    const backendMunicipalityZone = await getMunicipalityZone(finalLat, finalLng);
+
     const db = getDbPool();
     if (db) {
       try {
@@ -350,7 +370,7 @@ app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, r
             finalPhotoUrl,
             finalLat,
             finalLng,
-            municipality_zone || null
+            backendMunicipalityZone
           ]
         );
       } catch (dbError) {

@@ -265,6 +265,48 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
   }
 });
 
+app.post('/api/analyze-image', authenticateToken, upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    const base64EncodeString = req.file.buffer.toString('base64');
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [
+        {
+          inlineData: {
+            mimeType: req.file.mimetype,
+            data: base64EncodeString,
+          },
+        },
+        "Analyze this image of a community infrastructure issue. Return ONLY a raw JSON object with three keys: \"category\" (Must be exactly one of: Pothole, Streetlight, Water Leak, Garbage, Other), \"severity\" (High, Medium, Low), and \"description\" (A short, 1-sentence description of the problem)."
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            category: { type: Type.STRING },
+            severity: { type: Type.STRING },
+            description: { type: Type.STRING }
+          }
+        }
+      }
+    });
+
+    const jsonStr = response.text || "";
+    const result = JSON.parse(jsonStr);
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error("AI Analysis error:", error);
+    res.status(500).json({ error: 'Failed to analyze image' });
+  }
+});
+
 app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, res) => {
   console.log("POST /api/issues payload:", req.body);
   try {

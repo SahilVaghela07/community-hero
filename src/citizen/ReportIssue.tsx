@@ -23,6 +23,39 @@ export const ReportIssue: React.FC = () => {
   const [municipalityZone, setMunicipalityZone] = useState<string | null>(null);
   const [locationStatus, setLocationStatus] = useState<string>('Detecting location...');
 
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiSuggested, setAiSuggested] = useState(false);
+
+  const analyzeImage = async (selectedFile: File) => {
+    setAiAnalyzing(true);
+    setAiSuggested(false);
+    
+    try {
+      const formData = new FormData();
+      formData.append('photo', selectedFile);
+      const res = await axios.post('/api/analyze-image', formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (res.data.success && res.data.data) {
+        const { category, description } = res.data.data;
+        if (category) {
+          const mappedCategory = ['Pothole', 'Water Leakage', 'Garbage', 'Streetlight'].includes(category) ? category : (category === 'Water Leak' ? 'Water Leakage' : 'Other');
+          setType(mappedCategory);
+        }
+        if (description) {
+          setDescription(description);
+        }
+        setAiSuggested(true);
+      }
+    } catch (e) {
+      console.error("AI analysis failed", e);
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
+
   React.useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -64,6 +97,7 @@ export const ReportIssue: React.FC = () => {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
+      analyzeImage(selectedFile);
     }
   };
 
@@ -77,6 +111,7 @@ export const ReportIssue: React.FC = () => {
       const droppedFile = e.dataTransfer.files[0];
       setFile(droppedFile);
       setPreviewUrl(URL.createObjectURL(droppedFile));
+      analyzeImage(droppedFile);
     }
   };
 
@@ -222,6 +257,12 @@ export const ReportIssue: React.FC = () => {
                 </p>
               </div>
             </div>
+            {aiAnalyzing && (
+              <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">AI is analyzing issue...</p>
+              </div>
+            )}
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -231,7 +272,14 @@ export const ReportIssue: React.FC = () => {
             />
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6">
+          <div className="grid sm:grid-cols-2 gap-6 relative">
+            
+            {aiSuggested && (
+              <div className="absolute -top-3 -right-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md z-10 animate-in fade-in zoom-in duration-300">
+                ✨ AI Suggested
+              </div>
+            )}
+            
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-2">{t("Type of Issue")}</label>
               <select

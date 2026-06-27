@@ -77,7 +77,8 @@ async function initDb() {
           longitude DECIMAL(11, 8),
           photo_url VARCHAR(255),
           upvote_count INT DEFAULT 0,
-          status VARCHAR(50) DEFAULT 'Pending',
+          upvotes INT DEFAULT 0,
+          status VARCHAR(50) DEFAULT 'Unverified',
           reporter_id INT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -86,6 +87,16 @@ async function initDb() {
         await db.query('ALTER TABLE issues ADD COLUMN photo_url VARCHAR(255), ADD COLUMN upvote_count INT DEFAULT 0');
       } catch (e) {
         // Ignored if already exists
+      }
+      try {
+        await db.query('ALTER TABLE issues ADD COLUMN upvotes INT DEFAULT 0');
+      } catch (e) {
+        // Ignored if already exists
+      }
+      try {
+        await db.query('ALTER TABLE issues MODIFY COLUMN status VARCHAR(50) DEFAULT "Unverified"');
+      } catch (e) {
+        // Ignored
       }
       try {
         await db.query('ALTER TABLE issues MODIFY COLUMN photo_url LONGTEXT');
@@ -129,6 +140,7 @@ async function initDb() {
       await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (1, 'Road', 'High', 'Pothole on Main St', 'Pending', 1, 'Vadodara')`);
       await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (2, 'Water', 'Medium', 'Leaking pipe', 'Working', 1, 'Vadodara')`);
       await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (3, 'Waste', 'Low', 'Garbage dump', 'Completed', 1, 'Vadodara')`);
+      await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (7, 'Road', 'Low', 'Missing sign', 'Unverified', 1, 'Vadodara')`);
       
       await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (4, 'Road', 'High', 'Broken street light', 'Pending', 1, 'Botad')`);
       await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (5, 'Water', 'High', 'No water supply', 'Working', 1, 'Botad')`);
@@ -390,9 +402,22 @@ app.post(['/api/issues/:id/upvote', '/api/upvote'], authenticateToken, async (re
       }
 
       await connection.execute(
-        'UPDATE issues SET upvote_count = upvote_count + 1 WHERE id = ?',
+        'UPDATE issues SET upvotes = upvotes + 1, upvote_count = upvote_count + 1 WHERE id = ?',
         [issueId]
       );
+
+      const [rows] = await connection.execute(
+        'SELECT upvotes, status FROM issues WHERE id = ?',
+        [issueId]
+      ) as any;
+
+      const issue = rows[0];
+      if (issue && issue.upvotes >= 3 && issue.status === 'Unverified') {
+        await connection.execute(
+          'UPDATE issues SET status = "Pending" WHERE id = ?',
+          [issueId]
+        );
+      }
 
       await connection.commit();
       connection.release();
@@ -437,6 +462,17 @@ app.get('/api/issues', async (req, res) => {
 
       if (!includeCompleted) {
         conditions.push('status != "Completed"');
+      }
+
+      if (req.query.status) {
+        conditions.push('status = ?');
+        params.push(req.query.status as string);
+        
+        // If they are specifically fetching Unverified issues, limit to their own zone if they have one
+        if (req.query.status === 'Unverified' && userRole === 'citizen' && userZone) {
+          conditions.push('municipality_zone = ?');
+          params.push(userZone);
+        }
       }
 
       // If the user is an admin and has a municipality_zone, filter the issues

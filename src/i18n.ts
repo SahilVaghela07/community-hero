@@ -35,7 +35,13 @@ const resources = {
       "dashboard.exportCSV": "Export to CSV",
       "dashboard.refreshBoard": "Refresh Board",
       "dashboard.viewLocation": "View Location on Map",
-      "dashboard.noIssues": "No issues in this column."
+      "dashboard.noIssues": "No issues in this column.",
+      "dashboard.tabs.pending": "Pending",
+      "dashboard.tabs.working": "Working",
+      "dashboard.tabs.completed": "Completed",
+      "dashboard.pagination.prev": "Previous",
+      "dashboard.pagination.next": "Next",
+      "dashboard.pagination.page": "Page {{current}} of {{total}}"
     }
   },
   hi: {
@@ -71,7 +77,13 @@ const resources = {
       "dashboard.exportCSV": "CSV में निर्यात करें",
       "dashboard.refreshBoard": "बोर्ड रीफ्रेश करें",
       "dashboard.viewLocation": "मानचित्र पर स्थान देखें",
-      "dashboard.noIssues": "इस कॉलम में कोई समस्या नहीं है।"
+      "dashboard.noIssues": "इस कॉलम में कोई समस्या नहीं है।",
+      "dashboard.tabs.pending": "लंबित",
+      "dashboard.tabs.working": "काम चालू है",
+      "dashboard.tabs.completed": "पूर्ण",
+      "dashboard.pagination.prev": "पिछला",
+      "dashboard.pagination.next": "अगला",
+      "dashboard.pagination.page": "पृष्ठ {{current}} / {{total}}"
     }
   },
   gu: {
@@ -107,7 +119,13 @@ const resources = {
       "dashboard.exportCSV": "CSV માં નિકાસ કરો",
       "dashboard.refreshBoard": "બોર્ડ રિફ્રેશ કરો",
       "dashboard.viewLocation": "નકશા પર સ્થાન જુઓ",
-      "dashboard.noIssues": "આ કૉલમમાં કોઈ સમસ્યા નથી."
+      "dashboard.noIssues": "આ કૉલમમાં કોઈ સમસ્યા નથી.",
+      "dashboard.tabs.pending": "બાકી",
+      "dashboard.tabs.working": "કાર્ય ચાલુ છે",
+      "dashboard.tabs.completed": "પૂર્ણ",
+      "dashboard.pagination.prev": "પાછલું",
+      "dashboard.pagination.next": "આગળ",
+      "dashboard.pagination.page": "પૃષ્ઠ {{current}} / {{total}}"
     }
   }
 };

@@ -20,6 +20,8 @@ export const AdminDashboard: React.FC = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'Pending' | 'Working' | 'Completed'>('Pending');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchIssues();
@@ -132,114 +134,139 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  const pendingIssues = issues.filter(i => i.status === 'Pending');
-  const workingIssues = issues.filter(i => i.status === 'Working');
-  const completedIssues = issues.filter(i => i.status === 'Completed');
+  const handleTabChange = (tab: 'Pending' | 'Working' | 'Completed') => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
 
-  const Column = ({ title, statusIssues, nextStatus, nextStatusLabel, Icon }: any) => (
-    <div className="flex flex-col bg-slate-900/50 rounded-2xl border border-slate-800 h-[calc(100vh-12rem)] min-w-[320px]">
-      <div className="p-4 border-b border-slate-800 bg-slate-900 rounded-t-2xl sticky top-0 z-10 flex justify-between items-center">
-        <h3 className="font-semibold text-slate-200">{title}</h3>
-        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full text-xs font-medium">
-          {statusIssues.length}
-        </span>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-700">
-        {statusIssues.map((issue: Issue) => (
-          <div 
-            key={issue.id} 
-            onClick={() => openMap(issue.latitude, issue.longitude)}
-            className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 shadow-sm hover:border-slate-600 cursor-pointer transition-colors flex flex-col gap-3 group"
-          >
-            <div className="flex justify-between items-start">
-              <span className="px-2 py-1 bg-slate-900 text-slate-300 border border-slate-700 rounded-md text-[10px] font-semibold uppercase tracking-wider">
-                {issue.category}
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium">
-                {new Date(issue.created_at).toLocaleDateString()}
-              </span>
-            </div>
+  const filteredIssues = issues.filter(i => i.status === activeTab);
+  const itemsPerPage = 6;
+  const totalPages = Math.max(1, Math.ceil(filteredIssues.length / itemsPerPage));
+  const currentIssues = filteredIssues.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-            {issue.photo_url && (
-              <div className="rounded-lg overflow-hidden bg-slate-900 border border-slate-700 h-32 relative shrink-0 mt-2">
-                <img src={issue.photo_url} alt="Issue" className="w-full h-full object-cover" />
-              </div>
-            )}
-
-            <p className="text-slate-300 text-sm leading-relaxed mt-2">
-              {issue.description}
-            </p>
-
-            <div className="flex items-center gap-1.5 text-xs text-blue-400 group-hover:text-blue-300 transition-colors w-fit p-1 -ml-1 rounded hover:bg-blue-500/10">
-              <MapPin className="w-3.5 h-3.5" />
-              {t("dashboard.viewLocation")}
-            </div>
-
-            {nextStatus && (
-              <div className="pt-3 mt-1 border-t border-slate-700/50" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => updateStatus(issue.id, nextStatus)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-slate-50 rounded-lg transition-colors text-xs font-medium"
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {nextStatusLabel}
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-
-        {statusIssues.length === 0 && (
-          <div className="text-center py-10 px-4 text-slate-500 text-sm">
-            {t("dashboard.noIssues")}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const getNextStatus = (current: string) => {
+    if (current === 'Pending') return { status: 'Working', label: t("dashboard.startWork"), Icon: Play };
+    if (current === 'Working') return { status: 'Completed', label: t("dashboard.completeWork"), Icon: CheckCircle2 };
+    return null;
+  };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 px-4 mt-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-slate-200">{t("dashboard.title")}</h2>
+    <div className="w-full max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 px-4 mt-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t("dashboard.title")}</h2>
         <div className="flex items-center gap-4">
           <button 
             onClick={exportToCSV} 
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors text-sm font-medium"
           >
             <Download className="w-4 h-4" />
             {t("dashboard.exportCSV")}
           </button>
-          <button onClick={fetchIssues} className="text-sm font-medium text-slate-400 hover:text-slate-200 transition-colors">
+          <button onClick={fetchIssues} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
             {t("dashboard.refreshBoard")}
           </button>
         </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-4">
-        <Column 
-          title={t("dashboard.pending")} 
-          statusIssues={pendingIssues} 
-          nextStatus="Working" 
-          nextStatusLabel={t("dashboard.startWork")} 
-          Icon={Play}
-        />
-        <Column 
-          title={t("dashboard.working")} 
-          statusIssues={workingIssues} 
-          nextStatus="Completed" 
-          nextStatusLabel={t("dashboard.completeWork")} 
-          Icon={CheckCircle2}
-        />
-        <Column 
-          title={t("dashboard.completed")} 
-          statusIssues={completedIssues} 
-          nextStatus={null} 
-          nextStatusLabel="" 
-          Icon={null}
-        />
+      <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 mb-6">
+        {(['Pending', 'Working', 'Completed'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => handleTabChange(tab)}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+            }`}
+          >
+            {t(`dashboard.tabs.${tab.toLowerCase()}`)}
+            <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
+              {issues.filter(i => i.status === tab).length}
+            </span>
+          </button>
+        ))}
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {currentIssues.map((issue: Issue) => {
+          const next = getNextStatus(issue.status);
+          const NextIcon = next?.Icon;
+          
+          return (
+            <div 
+              key={issue.id} 
+              onClick={() => openMap(issue.latitude, issue.longitude)}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer transition-colors flex flex-col gap-3 group"
+            >
+              <div className="flex justify-between items-start">
+                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-md text-[10px] font-semibold uppercase tracking-wider">
+                  {issue.category}
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {new Date(issue.created_at).toLocaleDateString()}
+                </span>
+              </div>
+
+              {issue.photo_url && (
+                <div className="rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-40 relative shrink-0 mt-2">
+                  <img src={issue.photo_url} alt="Issue" className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              <p className="text-slate-900 dark:text-slate-100 text-sm leading-relaxed mt-2 line-clamp-3">
+                {issue.description}
+              </p>
+
+              <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors w-fit p-1 -ml-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                <MapPin className="w-3.5 h-3.5" />
+                {t("dashboard.viewLocation")}
+              </div>
+
+              {next && NextIcon && (
+                <div className="pt-4 mt-auto border-t border-slate-100 dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => updateStatus(issue.id, next.status)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium"
+                  >
+                    <NextIcon className="w-3.5 h-3.5" />
+                    {next.label}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {currentIssues.length === 0 && (
+          <div className="col-span-1 md:col-span-2 text-center py-20 px-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 text-sm">
+            {t("dashboard.noIssues")}
+          </div>
+        )}
+      </div>
+
+      {filteredIssues.length > itemsPerPage && (
+        <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-6 mt-6 pb-12">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 text-sm font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {t("dashboard.pagination.prev")}
+          </button>
+          
+          <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+            {t("dashboard.pagination.page", { current: currentPage, total: totalPages })}
+          </span>
+          
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 text-sm font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {t("dashboard.pagination.next")}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

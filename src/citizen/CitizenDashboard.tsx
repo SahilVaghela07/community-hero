@@ -14,6 +14,7 @@ interface Issue {
 }
 
 export const CitizenDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'Pending' | 'Unverified'>('Pending');
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,14 +25,20 @@ export const CitizenDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchIssues();
-  }, [page]);
+  }, [page, activeTab]);
 
   const fetchIssues = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`/api/issues?limit=${limit}&offset=${page * limit}`);
+      const statusParam = activeTab === 'Unverified' ? '&status=Unverified' : '';
+      const response = await axios.get(`/api/issues?limit=${limit}&offset=${page * limit}${statusParam}`);
       if (response.data.success) {
-        setIssues(response.data.data);
+        // If "Pending" tab, filter out "Unverified" locally just in case, or if backend doesn't filter
+        let fetched = response.data.data;
+        if (activeTab === 'Pending') {
+           fetched = fetched.filter((i: Issue) => i.status !== 'Unverified');
+        }
+        setIssues(fetched);
       }
     } catch (err) {
       console.error(err);
@@ -47,7 +54,12 @@ export const CitizenDashboard: React.FC = () => {
       // Update local state without re-fetching
       setIssues(issues.map(issue => 
         issue.id === id ? { ...issue, upvote_count: (issue.upvote_count || 0) + 1 } : issue
-      ));
+      ).filter(issue => {
+        if (activeTab === 'Unverified' && issue.id === id && (issue.upvote_count || 0) >= 3) {
+          return false;
+        }
+        return true;
+      }));
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to upvote');
     }
@@ -88,9 +100,26 @@ export const CitizenDashboard: React.FC = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Pending Issues</h2>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+      <div className="flex flex-col mb-8 gap-4">
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Citizen Dashboard</h2>
+        
+        {/* Tabs */}
+        <div className="flex space-x-2 border-b border-slate-200 dark:border-slate-800 pb-px">
+          <button
+            onClick={() => setActiveTab('Pending')}
+            className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'Pending' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          >
+            Ongoing Issues
+          </button>
+          <button
+            onClick={() => setActiveTab('Unverified')}
+            className={`px-4 py-2 font-medium text-sm transition-colors ${activeTab === 'Unverified' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          >
+            Community Verification
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-4 mt-4">
           <div className="relative w-full sm:w-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-400 dark:text-slate-500" />
@@ -150,13 +179,13 @@ export const CitizenDashboard: React.FC = () => {
                   className="flex flex-1 items-center justify-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 active:bg-blue-200 dark:active:bg-blue-500/30 rounded-xl transition-colors font-medium text-sm border border-transparent"
                 >
                   <ArrowUpCircle className="w-5 h-5" />
-                  Upvote
+                  {activeTab === 'Unverified' ? 'Verify Issue (👍)' : 'Upvote'}
                 </button>
                 <div className="flex bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 min-w-[80px] justify-center items-center">
                   <span className="font-bold text-slate-900 dark:text-slate-200">
-                    {issue.upvote_count || 0}
+                    {activeTab === 'Unverified' ? `${issue.upvote_count || 0}/3` : (issue.upvote_count || 0)}
                   </span>
-                  <span className="text-xs text-slate-500 ml-1">votes</span>
+                  <span className="text-xs text-slate-500 ml-1 whitespace-nowrap">{activeTab === 'Unverified' ? 'Votes Needed' : 'votes'}</span>
                 </div>
               </div>
             </div>

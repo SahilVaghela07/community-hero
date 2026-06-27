@@ -20,17 +20,34 @@ export const ReportIssue: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [municipalityZone, setMunicipalityZone] = useState<string | null>(null);
   const [locationStatus, setLocationStatus] = useState<string>('Detecting location...');
 
   React.useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           setLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude
           });
-          setLocationStatus('Location Captured');
+          setLocationStatus('Detecting city...');
+          
+          try {
+            // Reverse geocode to extract city
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`);
+            const data = await res.json();
+            const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county;
+            if (city) {
+              setMunicipalityZone(city);
+              setLocationStatus(`Location Captured (${city})`);
+            } else {
+              setLocationStatus('Location Captured');
+            }
+          } catch (e) {
+            console.warn('Reverse geocoding failed', e);
+            setLocationStatus('Location Captured');
+          }
         },
         (error) => {
           console.warn('Geolocation error:', error);
@@ -131,6 +148,9 @@ export const ReportIssue: React.FC = () => {
       }
       formData.append('latitude', String(location.lat || 0.0000));
       formData.append('longitude', String(location.lng || 0.0000));
+      if (municipalityZone) {
+        formData.append('municipality_zone', municipalityZone);
+      }
 
       const response = await axios.post('/api/issues', formData, {
         headers: {

@@ -12,7 +12,6 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'citizen' | 'admin'>('citizen');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
@@ -45,7 +44,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post('/api/auth/signup', { name, email, password, role });
+      const response = await axios.post('/api/auth/signup', { name, email, password });
       if (response.data.success) {
         // Automatically log them in after signup
         const loginResponse = await axios.post('/api/auth/login', { email, password });
@@ -116,30 +115,6 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
               className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               placeholder="••••••••"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1">Account Role</label>
-            <div className="flex bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shrink-0">
-              <button
-                type="button"
-                onClick={() => setRole('citizen')}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  role === 'citizen' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-transparent' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                Citizen
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('admin')}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  role === 'admin' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-transparent' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-              >
-                Municipal Admin
-              </button>
-            </div>
           </div>
 
           <button 

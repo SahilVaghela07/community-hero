@@ -114,8 +114,35 @@ async function initDb() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      // Seed a default test user
-      await db.query(`INSERT IGNORE INTO users (id, name, points_balance) VALUES (1, 'Test User', 0)`);
+      try {
+        await db.query('ALTER TABLE users ADD COLUMN municipality_zone VARCHAR(100)');
+      } catch (e) {
+        // Ignored if already exists
+      }
+      try {
+        await db.query('ALTER TABLE issues ADD COLUMN municipality_zone VARCHAR(100)');
+      } catch (e) {
+        // Ignored if already exists
+      }
+
+      // Seed Fake Data
+      const bcrypt = await import('bcryptjs');
+      const hash = await bcrypt.hash('password123', 10);
+      
+      // Seed users
+      await db.query(`INSERT IGNORE INTO users (id, name, email, password_hash, role, municipality_zone) VALUES (1, 'Test User', 'test@example.com', '${hash}', 'citizen', NULL)`);
+      await db.query(`INSERT IGNORE INTO users (id, name, email, password_hash, role, municipality_zone) VALUES (2, 'Vadodara Admin', 'vmc@example.com', '${hash}', 'admin', 'Vadodara')`);
+      await db.query(`INSERT IGNORE INTO users (id, name, email, password_hash, role, municipality_zone) VALUES (3, 'Botad Admin', 'bmc@example.com', '${hash}', 'admin', 'Botad')`);
+
+      // Seed issues
+      await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (1, 'Road', 'High', 'Pothole on Main St', 'Pending', 1, 'Vadodara')`);
+      await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (2, 'Water', 'Medium', 'Leaking pipe', 'Working', 1, 'Vadodara')`);
+      await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (3, 'Waste', 'Low', 'Garbage dump', 'Completed', 1, 'Vadodara')`);
+      
+      await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (4, 'Road', 'High', 'Broken street light', 'Pending', 1, 'Botad')`);
+      await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (5, 'Water', 'High', 'No water supply', 'Working', 1, 'Botad')`);
+      await db.query(`INSERT IGNORE INTO issues (id, category, severity, description, status, reporter_id, municipality_zone) VALUES (6, 'Waste', 'Medium', 'Overflowing bin', 'Pending', 1, 'Botad')`);
+
       console.log('MySQL schema ensured.');
     } catch (e) {
       console.warn('Could not initialize MySQL tables. Is the DB running?', e);
@@ -169,14 +196,16 @@ function authenticateToken(req: express.Request, res: express.Response, next: ex
 
 app.post(['/api/auth/signup', '/api/signup'], async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
     const db = getDbPool();
     if (!db) return res.status(503).json({ error: 'Database unavailable' });
 
-    const finalRole = role === 'admin' ? 'admin' : 'citizen';
+    // Seed and Delegate: check against root admin email
+    const rootAdminEmail = process.env.ROOT_ADMIN_EMAIL;
+    const finalRole = (rootAdminEmail && email.toLowerCase() === rootAdminEmail.toLowerCase()) ? 'admin' : 'citizen';
 
     // Hash the password
     const salt = await bcrypt.genSalt(10);
@@ -187,7 +216,7 @@ app.post(['/api/auth/signup', '/api/signup'], async (req, res) => {
         'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
         [name, email, passwordHash, finalRole]
       ) as any;
-      res.status(201).json({ success: true, message: 'User created successfully' });
+      res.status(201).json({ success: true, message: 'User created successfully', role: finalRole });
     } catch (dbErr: any) {
       if (dbErr.code === 'ER_DUP_ENTRY') {
         return res.status(409).json({ error: 'Email already exists' });
@@ -221,7 +250,7 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, role: user.role, email: user.email }, 
+      { id: user.id, role: user.role, email: user.email, municipality_zone: user.municipality_zone }, 
       JWT_SECRET, 
       { expiresIn: '12h' }
     );
@@ -234,7 +263,8 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        points: user.points_balance
+        points: user.points_balance,
+        municipality_zone: user.municipality_zone
       }
     });
 
@@ -247,7 +277,7 @@ app.post(['/api/auth/login', '/api/login'], async (req, res) => {
 app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, res) => {
   console.log("POST /api/issues payload:", req.body);
   try {
-    const { description, type, reporter_id, latitude, longitude } = req.body;
+    const { description, type, reporter_id, latitude, longitude, municipality_zone } = req.body;
     const userId = (req as any).user?.id || reporter_id;
 
     if (!description || !type) {
@@ -266,7 +296,7 @@ app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, r
     if (db) {
       try {
         await db.execute(
-          'INSERT INTO issues (category, severity, description, reporter_id, photo_url, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO issues (category, severity, description, reporter_id, photo_url, latitude, longitude, municipality_zone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           [
             type, 
             'Medium', // Default severity
@@ -274,7 +304,8 @@ app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, r
             userId,
             finalPhotoUrl,
             finalLat,
-            finalLng
+            finalLng,
+            municipality_zone || null
           ]
         );
       } catch (dbError) {
@@ -352,13 +383,42 @@ app.get('/api/issues', async (req, res) => {
       const offset = parseInt(req.query.offset as string) || 0;
       const includeCompleted = req.query.all === 'true';
 
-      let query = 'SELECT * FROM issues';
-      if (!includeCompleted) {
-        query += ' WHERE status != "Completed"';
+      // Extract user info from token (optional authentication for this route)
+      let userZone = null;
+      let userRole = null;
+      const authHeader = req.headers.authorization;
+      if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        try {
+          const userPayload = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-12345') as any;
+          userRole = userPayload.role;
+          userZone = userPayload.municipality_zone;
+        } catch (e) {
+          // Ignore invalid token
+        }
       }
+
+      let query = 'SELECT * FROM issues';
+      let conditions: string[] = [];
+      let params: any[] = [];
+
+      if (!includeCompleted) {
+        conditions.push('status != "Completed"');
+      }
+
+      // If the user is an admin and has a municipality_zone, filter the issues
+      if (userRole === 'admin' && userZone) {
+        conditions.push('municipality_zone = ?');
+        params.push(userZone);
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+
       query += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
 
-      const [rows] = await db.query(query);
+      const [rows] = await db.query(query, params);
       res.json({ success: true, data: rows });
     } else {
       res.status(503).json({ success: false, error: 'Database connection not available.' });
@@ -514,6 +574,49 @@ app.patch('/api/users/me', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error("Error updating user profile:", error);
     res.status(500).json({ success: false, error: "Failed to update user profile" });
+  }
+});
+
+// Admin User Management APIs
+app.get('/api/users', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const db = getDbPool();
+    if (!db) return res.status(503).json({ success: false, error: 'Database connection not available.' });
+
+    const [users] = await db.execute('SELECT id, name, email, role, points_balance, created_at FROM users ORDER BY created_at DESC');
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch users" });
+  }
+});
+
+app.patch('/api/users/:id/role', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const db = getDbPool();
+    if (!db) return res.status(503).json({ success: false, error: 'Database connection not available.' });
+
+    const targetUserId = req.params.id;
+    const { role } = req.body;
+    const currentUserId = (req as any).user.id;
+
+    if (parseInt(targetUserId) === currentUserId) {
+       return res.status(400).json({ success: false, error: 'Cannot change your own role' });
+    }
+
+    if (!['admin', 'citizen'].includes(role)) {
+      return res.status(400).json({ success: false, error: 'Invalid role' });
+    }
+
+    const [result] = await db.execute('UPDATE users SET role = ? WHERE id = ?', [role, targetUserId]) as any;
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    res.json({ success: true, message: `User role updated to ${role}` });
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    res.status(500).json({ success: false, error: "Failed to update user role" });
   }
 });
 

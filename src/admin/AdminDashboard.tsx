@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Loader2, AlertTriangle, MapPin, Play, CheckCircle2, Download } from 'lucide-react';
+import { Loader2, AlertTriangle, MapPin, Play, CheckCircle2, Download, Users, Shield, ShieldOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface Issue {
@@ -15,17 +15,33 @@ interface Issue {
   created_at: string;
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  points_balance: number;
+  created_at: string;
+}
+
 export const AdminDashboard: React.FC = () => {
   const { t } = useTranslation();
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'Pending' | 'Working' | 'Completed'>('Pending');
+  const [activeTab, setActiveTab] = useState<'Pending' | 'Working' | 'Completed' | 'Users'>('Pending');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchIssues();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'Users') {
+      fetchUsers();
+    }
+  }, [activeTab]);
 
   const fetchIssues = async () => {
     setLoading(true);
@@ -42,12 +58,33 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get('/api/users');
+      if (response.data.success) {
+        setUsers(response.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load users', err);
+    }
+  };
+
   const updateStatus = async (id: number, newStatus: string) => {
     try {
       await axios.patch(`/api/issues/${id}/status`, { status: newStatus });
       fetchIssues(); // Refresh the list
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to update status');
+    }
+  };
+
+  const updateUserRole = async (userId: number, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'citizen' : 'admin';
+    try {
+      await axios.patch(`/api/users/${userId}/role`, { role: newRole });
+      fetchUsers(); // Refresh the user list
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to update user role');
     }
   };
 
@@ -134,7 +171,7 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  const handleTabChange = (tab: 'Pending' | 'Working' | 'Completed') => {
+  const handleTabChange = (tab: 'Pending' | 'Working' | 'Completed' | 'Users') => {
     setActiveTab(tab);
     setCurrentPage(1);
   };
@@ -169,7 +206,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 mb-6">
-        {(['Pending', 'Working', 'Completed'] as const).map(tab => (
+        {(['Pending', 'Working', 'Completed', 'Users'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
@@ -179,14 +216,76 @@ export const AdminDashboard: React.FC = () => {
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
             }`}
           >
-            {t(`dashboard.tabs.${tab.toLowerCase()}`)}
-            <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
-              {issues.filter(i => i.status === tab).length}
-            </span>
+            {tab === 'Users' ? t("dashboard.tabs.users", { defaultValue: "Manage Users" }) : t(`dashboard.tabs.${tab.toLowerCase()}`)}
+            {tab !== 'Users' && (
+              <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
+                {issues.filter(i => i.status === tab).length}
+              </span>
+            )}
+            {tab === 'Users' && (
+              <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
+                {users.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
+      {activeTab === 'Users' ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="px-6 py-4 font-medium">{t("users.name", { defaultValue: "Name" })}</th>
+                  <th className="px-6 py-4 font-medium">{t("users.email", { defaultValue: "Email" })}</th>
+                  <th className="px-6 py-4 font-medium">{t("users.role", { defaultValue: "Role" })}</th>
+                  <th className="px-6 py-4 font-medium text-right">{t("users.actions", { defaultValue: "Actions" })}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                {users.map(user => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{user.name}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{user.email}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                        user.role === 'admin' 
+                          ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                      }`}>
+                        {user.role === 'admin' ? <Shield className="w-3 h-3" /> : <Users className="w-3 h-3" />}
+                        {user.role === 'admin' ? t("users.roleAdmin", { defaultValue: "Admin" }) : t("users.roleCitizen", { defaultValue: "Citizen" })}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => updateUserRole(user.id, user.role)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                          user.role === 'admin'
+                            ? 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                            : 'bg-white dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-slate-200 dark:border-slate-700 hover:border-purple-200 dark:hover:border-purple-500/30'
+                        }`}
+                      >
+                        {user.role === 'admin' ? (
+                          <><ShieldOff className="w-3.5 h-3.5" /> {t("users.demote", { defaultValue: "Demote to Citizen" })}</>
+                        ) : (
+                          <><Shield className="w-3.5 h-3.5" /> {t("users.upgrade", { defaultValue: "Upgrade to Admin" })}</>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {users.length === 0 && (
+             <div className="text-center py-12 text-slate-500 text-sm">
+               {t("users.noUsers", { defaultValue: "No users found" })}
+             </div>
+          )}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {currentIssues.map((issue: Issue) => {
           const next = getNextStatus(issue.status);
@@ -243,8 +342,9 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
-      {filteredIssues.length > itemsPerPage && (
+      {activeTab !== 'Users' && filteredIssues.length > itemsPerPage && (
         <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-6 mt-6 pb-12">
           <button
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

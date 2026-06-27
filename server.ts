@@ -105,15 +105,6 @@ async function initDb() {
           PRIMARY KEY (user_id, issue_id)
         );
       `);
-      await db.query(`
-        CREATE TABLE IF NOT EXISTS notifications (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          user_id INT,
-          message TEXT,
-          is_read BOOLEAN DEFAULT FALSE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
       try {
         await db.query('ALTER TABLE users ADD COLUMN municipality_zone VARCHAR(100)');
       } catch (e) {
@@ -487,11 +478,6 @@ app.patch('/api/issues/:id/status', authenticateToken, isAdmin, async (req, res)
       if (status === 'Completed' && issue.status !== 'Completed') {
         if (issue.reporter_id) {
           await connection.execute('UPDATE users SET points_balance = points_balance + 50 WHERE id = ?', [issue.reporter_id]);
-          await connection.execute(
-            'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
-            [issue.reporter_id, 'Task Completed! You have earned 50 points.']
-          );
-          console.log(`Inserted notification for user ${issue.reporter_id}`);
           message = 'Issue Completed! 50 Points awarded to the reporter.';
         }
       }
@@ -617,41 +603,6 @@ app.patch('/api/users/:id/role', authenticateToken, isAdmin, async (req, res) =>
   } catch (error) {
     console.error("Error updating user role:", error);
     res.status(500).json({ success: false, error: "Failed to update user role" });
-  }
-});
-
-app.get('/api/notifications', authenticateToken, async (req, res) => {
-  try {
-    const userPayload = (req as any).user;
-    if (!userPayload || !userPayload.id) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-    const db = getDbPool();
-    if (!db) return res.status(503).json({ success: false, error: 'Database connection not available.' });
-
-    const [notifications] = await db.execute('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC', [userPayload.id]);
-    console.log(`GET /api/notifications for user ${userPayload.id}: returning ${Array.isArray(notifications) ? notifications.length : 0} rows`);
-    res.json({ success: true, data: notifications });
-  } catch (error) {
-    console.error("Error fetching notifications:", error);
-    res.status(500).json({ success: false, error: "Failed to fetch notifications" });
-  }
-});
-
-app.patch('/api/notifications/:id/read', authenticateToken, async (req, res) => {
-  try {
-    const userPayload = (req as any).user;
-    if (!userPayload || !userPayload.id) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
-    }
-    const db = getDbPool();
-    if (!db) return res.status(503).json({ success: false, error: 'Database connection not available.' });
-
-    await db.execute('UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?', [req.params.id, userPayload.id]);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error updating notification:", error);
-    res.status(500).json({ success: false, error: "Failed to update notification" });
   }
 });
 

@@ -38,7 +38,6 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ReportIssue } from './citizen/ReportIssue';
 import { CitizenDashboard } from './citizen/CitizenDashboard';
 import { AdminDashboard } from './admin/AdminDashboard';
-import { NotificationBell } from './components/NotificationBell';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { useTranslation } from 'react-i18next';
@@ -69,7 +68,6 @@ function MainNav() {
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            {!isAdmin && <NotificationBell />}
             {!isAdmin && (
               <Link
                 to="/report"

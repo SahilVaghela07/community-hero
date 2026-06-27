@@ -61,7 +61,11 @@ export const CitizenDashboard: React.FC = () => {
         return true;
       }));
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to upvote');
+      if (err.response?.status === 400 && err.response?.data?.error === 'You have already voted on this issue.') {
+        alert('You have already verified this issue');
+      } else {
+        alert(err.response?.data?.error || 'Failed to upvote');
+      }
     }
   };
 

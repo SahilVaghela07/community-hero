@@ -51,20 +51,20 @@ function MainNav() {
   const { t } = useTranslation();
 
   return (
-    <nav className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+    <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
+            <div className="p-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg">
               <Camera className="w-5 h-5" />
             </div>
-            <span className="font-semibold text-white tracking-tight">{t("Community Hero")}</span>
+            <span className="font-semibold text-slate-900 dark:text-white tracking-tight">{t("Community Hero")}</span>
           </div>
           
-          <div className="flex bg-slate-950 p-1 rounded-xl items-center">
+          <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl items-center transition-colors duration-200">
             <button
               onClick={toggleTheme}
-              className="px-3 py-2 rounded-lg text-slate-400 hover:text-white transition-colors"
+              className="px-3 py-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               title="Toggle theme"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -74,7 +74,7 @@ function MainNav() {
               <Link
                 to="/report"
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname === '/report' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  location.pathname === '/report' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 {t("Report Issue")}
@@ -83,7 +83,7 @@ function MainNav() {
             <Link
               to="/dashboard"
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname === '/dashboard' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                location.pathname === '/dashboard' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {isAdmin ? t("Admin Dashboard") : t("Dashboard")}
@@ -91,14 +91,14 @@ function MainNav() {
             <Link
               to="/profile"
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname === '/profile' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                location.pathname === '/profile' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {t("Profile")}
             </Link>
             <button
               onClick={logout}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-rose-400 transition-colors ml-2"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors ml-2"
             >
               {t("Logout")}
             </button>
@@ -163,8 +163,8 @@ function ProfileView() {
 
   return (
     <div className="w-full max-w-md mx-auto space-y-8 animate-in fade-in duration-500 mt-8">
-      <h2 className="text-2xl font-semibold text-white flex items-center gap-2 mb-6">
-        <User className="w-6 h-6 text-blue-400" />
+      <h2 className="text-2xl font-semibold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
+        <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
         {t("My Profile")}
       </h2>
       
@@ -173,22 +173,22 @@ function ProfileView() {
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
       ) : userProfile ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-sm dark:shadow-2xl flex flex-col items-center text-center">
           <div className="w-24 h-24 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-lg mb-6">
             {userProfile.name.charAt(0)}
           </div>
-          <h3 className="text-2xl font-bold text-white mb-1">{userProfile.name}</h3>
-          <p className="text-slate-400 mb-2 font-medium capitalize">{userProfile.role} Contributor</p>
-          <div className="text-sm text-slate-500 mb-6">{userProfile.email}</div>
+          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{userProfile.name}</h3>
+          <p className="text-slate-600 dark:text-slate-400 mb-2 font-medium capitalize">{userProfile.role} Contributor</p>
+          <div className="text-sm text-slate-500 dark:text-slate-400 mb-6">{userProfile.email}</div>
           
           <div className="w-full mb-6">
-            <label className="block text-sm font-medium text-slate-400 mb-2 text-left">
+            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2 text-left">
               {t("Language")}
             </label>
             <select
               value={i18n.language}
               onChange={handleLanguageChange}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none"
             >
               <option value="en">{t("English")}</option>
               <option value="hi">{t("Hindi")}</option>
@@ -202,7 +202,7 @@ function ProfileView() {
                 setEditName(userProfile.name);
                 setIsEditingProfile(true);
               }}
-              className={`flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors text-sm font-medium ${userProfile.role !== 'admin' ? 'mb-8' : 'mb-4'}`}
+              className={`flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-lg transition-colors text-sm font-medium ${userProfile.role !== 'admin' ? 'mb-8' : 'mb-4'}`}
             >
               <Edit2 className="w-4 h-4" />
               {t("Edit Profile")}
@@ -210,50 +210,50 @@ function ProfileView() {
           )}
           
           {userProfile.role !== 'admin' && (
-            <div className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-inner">
+            <div className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-inner">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">{t("Points Wallet")}</p>
               <div className="flex items-center justify-center gap-3">
-                <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-xl">
+                <div className="p-3 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 rounded-xl">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 tracking-tighter">
+                <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-amber-600 dark:from-yellow-400 dark:to-amber-500 tracking-tighter">
                   {userProfile.points_balance}
                 </span>
               </div>
-              <p className="text-sm text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-4 max-w-[200px] mx-auto leading-relaxed">
                 {t("Points earned by helping keep the community safe.")}
               </p>
             </div>
           )}
         </div>
       ) : (
-        <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-center">
+        <div className="p-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl text-center">
           <p className="font-medium">Failed to load profile details</p>
         </div>
       )}
       
       {isEditingProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl dark:shadow-2xl relative">
             <button
               onClick={() => setIsEditingProfile(false)}
-              className="absolute top-4 right-4 p-1 rounded-full text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
+              className="absolute top-4 right-4 p-1 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
             
-            <h3 className="text-xl font-semibold text-white mb-6">Edit Profile</h3>
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">Edit Profile</h3>
             
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Display Name
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="Enter your name"
                   required
                 />
@@ -263,7 +263,7 @@ function ProfileView() {
                 <button
                   type="button"
                   onClick={() => setIsEditingProfile(false)}
-                  className="px-4 py-2 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   Cancel
                 </button>
@@ -297,7 +297,7 @@ function MainApp() {
   const isAdmin = currentUser.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans transition-colors duration-200">
       <MainNav />
       <main className="p-4 sm:p-8">
         <Routes>
@@ -349,7 +349,7 @@ function AppRouter() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans transition-colors duration-200">
         {authMode === 'login' ? (
           <Login onSwitchToRegister={() => setAuthMode('signup')} />
         ) : (
@@ -378,10 +378,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('light-theme');
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('light-theme');
+      document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('theme', theme);
   }, [theme]);

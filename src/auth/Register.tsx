@@ -62,17 +62,17 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-xl">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm dark:shadow-xl">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <UserPlus className="w-8 h-8 text-emerald-500" />
+          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <UserPlus className="w-8 h-8 text-emerald-600 dark:text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-semibold text-white">Create Account</h2>
-          <p className="text-slate-400 mt-2">Join Community Hero</p>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Create Account</h2>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">Join Community Hero</p>
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-start gap-3">
+          <div className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <p>{error}</p>
           </div>
@@ -80,25 +80,25 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1">Full Name</label>
             <input 
               type="text" 
               required 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               placeholder="Jane Doe"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1">Email Address</label>
             <input 
               type="email" 
               required 
               value={email}
               onChange={handleEmailChange}
-              className={`w-full bg-slate-950 border ${emailError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-800 focus:border-blue-500 focus:ring-blue-500'} rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-1 transition-colors`}
+              className={`w-full bg-slate-50 dark:bg-slate-950 border ${emailError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:ring-blue-500'} rounded-xl px-4 py-3 text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-1 transition-colors`}
               placeholder="you@example.com"
             />
             {emailError && (
@@ -107,25 +107,25 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-1">Password</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1">Password</label>
             <input 
               type="password" 
               required 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               placeholder="••••••••"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-1">Account Role</label>
-            <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1 shrink-0">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-1">Account Role</label>
+            <div className="flex bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shrink-0">
               <button
                 type="button"
                 onClick={() => setRole('citizen')}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  role === 'citizen' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  role === 'citizen' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-transparent' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Citizen
@@ -134,7 +134,7 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
                 type="button"
                 onClick={() => setRole('admin')}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  role === 'admin' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  role === 'admin' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-transparent' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Municipal Admin
@@ -151,12 +151,12 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-slate-800 pt-6">
-          <p className="text-slate-400 text-sm">
+        <div className="mt-8 text-center border-t border-slate-200 dark:border-slate-800 pt-6">
+          <p className="text-slate-600 dark:text-slate-400 text-sm">
             Already have an account?{' '}
             <button 
               onClick={onSwitchToLogin}
-              className="text-emerald-500 hover:text-emerald-400 font-medium transition-colors"
+              className="text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 font-medium transition-colors"
             >
               Log in here
             </button>

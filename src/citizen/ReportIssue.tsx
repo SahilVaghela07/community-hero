@@ -157,21 +157,21 @@ export const ReportIssue: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
-        <h2 className="text-xl font-medium text-white mb-6 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm dark:shadow-2xl">
+        <h2 className="text-xl font-medium text-slate-900 dark:text-white mb-6 flex items-center gap-2">
           <Camera className="w-5 h-5 text-blue-500" />
           Snap & Report
         </h2>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3">
+          <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <p>{error}</p>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-start gap-3">
+          <div className="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <p>{success}</p>
           </div>
@@ -180,7 +180,7 @@ export const ReportIssue: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Unified Upload Area */}
           <div 
-            className="border-2 border-dashed border-slate-700 bg-slate-950/50 hover:bg-slate-800/50 transition-colors rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[240px] relative overflow-hidden group"
+            className="border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[240px] relative overflow-hidden group"
             onClick={() => fileInputRef.current?.click()}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
@@ -190,14 +190,14 @@ export const ReportIssue: React.FC = () => {
             ) : null}
 
             <div className="relative z-10 flex flex-col items-center space-y-4">
-              <div className="p-4 bg-slate-800/80 rounded-full text-slate-300 backdrop-blur-sm border border-slate-700 shadow-xl">
+              <div className="p-4 bg-white/80 dark:bg-slate-800/80 rounded-full text-slate-600 dark:text-slate-300 backdrop-blur-sm border border-slate-200 dark:border-slate-700 shadow-xl">
                 <UploadCloud className="w-8 h-8" />
               </div>
               <div className="space-y-1">
-                <p className="font-medium text-white shadow-sm">
+                <p className="font-medium text-slate-900 dark:text-white shadow-sm">
                   {previewUrl ? 'Click to change photo' : 'Drag & drop a photo, or click to browse'}
                 </p>
-                <p className="text-sm text-slate-400 drop-shadow-md">
+                <p className="text-sm text-slate-600 dark:text-slate-400 drop-shadow-md">
                   Supports JPG, PNG (Max 10MB)
                 </p>
               </div>
@@ -213,11 +213,11 @@ export const ReportIssue: React.FC = () => {
 
           <div className="grid sm:grid-cols-2 gap-6">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-400 mb-2">{t("Type of Issue")}</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-400 mb-2">{t("Type of Issue")}</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               >
                 <option value="Pothole">Pothole</option>
                 <option value="Water Leakage">Water Leakage</option>
@@ -229,14 +229,14 @@ export const ReportIssue: React.FC = () => {
 
             <div className="sm:col-span-2">
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-400">{t("Issue Description")}</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-400">{t("Issue Description")}</label>
                 <button
                   type="button"
                   onClick={startListening}
                   className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
                     isListening 
-                      ? 'bg-rose-500/10 text-rose-500 border border-rose-500/30' 
-                      : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                      ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-500 border border-rose-200 dark:border-rose-500/30' 
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700'
                   }`}
                   title="Voice to text"
                 >
@@ -250,16 +250,16 @@ export const ReportIssue: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Briefly describe the issue and exact location..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
               />
             </div>
           </div>
 
           {/* Location Indicator */}
-          <div className="flex items-center gap-3 text-sm text-slate-400 bg-slate-950/50 p-4 rounded-xl border border-slate-800/50 mt-2">
+          <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 mt-2">
             <MapPin className="w-5 h-5 text-blue-500" />
             <span className="flex-1">{locationStatus}</span>
-            <span className="font-mono text-xs opacity-70 bg-slate-900 px-2 py-1 rounded-md border border-slate-800">
+            <span className="font-mono text-xs opacity-70 bg-white dark:bg-slate-900 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800">
               GPS Active
             </span>
           </div>

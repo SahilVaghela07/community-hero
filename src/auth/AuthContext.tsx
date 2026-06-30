@@ -1,3 +1,10 @@
+/**
+ * File Purpose: Frontend Authentication Context
+ * 
+ * Manages the global state for user authentication, storing JWT tokens,
+ * and configuring axios interceptors to automatically attach credentials
+ * to API requests.
+ */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 

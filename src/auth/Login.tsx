@@ -1,3 +1,8 @@
+/**
+ * File Purpose: Frontend View - Authentication Login
+ * 
+ * Provides UI for citizens and administrators to securely log in.
+ */
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';

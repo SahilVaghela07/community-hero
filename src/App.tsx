@@ -1,3 +1,9 @@
+/**
+ * File Purpose: Frontend Main Application Router & Shell
+ * 
+ * Sets up the main layout, routing, theming, and shared UI components
+ * like the Navigation bar and Profile view.
+ */
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import axios from 'axios';

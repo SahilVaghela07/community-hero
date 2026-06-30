@@ -1,3 +1,8 @@
+/**
+ * File Purpose: Frontend View - Authentication Registration
+ * 
+ * Provides UI for citizens to create new accounts.
+ */
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';

@@ -1,3 +1,17 @@
+/**
+ * File Purpose: Backend Server & API Controller
+ * 
+ * This file serves as the core backend logic for the 'Community Hero' smart city app.
+ * It handles database connections, authentication, static file serving (Vite), 
+ * image analysis via Gemini, and exposes REST API endpoints for the frontend.
+ * 
+ * Key Features Documented:
+ * - Privilege Separation / Role-Based Security (Admin vs. Citizen routes)
+ * - API-First Dynamic Reverse Geocoding
+ * - Sybil Protection / Anti-Spam
+ * - Automated Status Progression
+ */
+
 import express from 'express';
 import multer from 'multer';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
@@ -154,6 +168,12 @@ async function initDb() {
 }
 initDb();
 
+// ==========================================
+// Privilege Separation / Role-Based Security
+// ==========================================
+// These middlewares ensure strictly isolated access control.
+// `authorizeRole` enables dynamic role checks, while `isAdmin` 
+// is a dedicated safeguard for administrative endpoints.
 // RBAC Middleware
 function authorizeRole(role: string) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -319,6 +339,12 @@ app.post('/api/analyze-image', authenticateToken, upload.single('photo'), async 
   }
 });
 
+// ==========================================
+// API-First Dynamic Reverse Geocoding
+// ==========================================
+// Automatically determines the correct city/municipality zone based on GPS coordinates.
+// Resolves using the OpenStreetMap Nominatim API, ensuring the backend dictates
+// location authority rather than trusting potentially spoofed frontend payloads.
 async function getMunicipalityZone(lat: number, lng: number): Promise<string> {
   const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`;
   
@@ -401,7 +427,11 @@ app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, r
     res.json({
       success: true,
       message: "Issue reported successfully",
+<<<<<<< HEAD
       zoneAssigned: backendMunicipalityZone // Optional: let the user know where it was routed
+=======
+      zoneAssigned: backendMunicipalityZone === 'Unknown' ? 'Unassigned' : backendMunicipalityZone
+>>>>>>> 7741d451b56d6df6314825e921e46c301fecff7a
     });
 
   } catch (error) {
@@ -410,6 +440,12 @@ app.post('/api/issues', authenticateToken, upload.single('photo'), async (req, r
   }
 });
 
+// ==========================================
+// Sybil Protection / Anti-Spam & Automated Status Progression
+// ==========================================
+// This endpoint tracks upvotes securely using a relational joining table (issue_upvotes).
+// The UNIQUE KEY constraint prevents duplicate upvotes from the same user (Sybil protection).
+// Automatically advances issue status from 'Unverified' to 'Pending' once the upvote threshold is reached.
 app.post(['/api/issues/:id/upvote', '/api/upvote'], authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).user?.id;

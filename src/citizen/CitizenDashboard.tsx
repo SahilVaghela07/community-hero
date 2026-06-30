@@ -1,3 +1,12 @@
+/**
+ * File Purpose: Frontend View - Citizen Dashboard
+ * 
+ * Displays a feed of civic issues allowing citizens to track progress and 
+ * participate in community moderation through upvoting.
+ * 
+ * Key Features Documented:
+ * - Sybil Protection / Anti-Spam (Citizens verify 'Unverified' issues via upvoting)
+ */
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Loader2, AlertTriangle, ArrowUpCircle, CheckCircle2, Search } from 'lucide-react';

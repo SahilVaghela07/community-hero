@@ -1,3 +1,15 @@
+/**
+ * File Purpose: Frontend View - Admin Control Panel.
+ * 
+ * This component provides administrative oversight for the Community Hero app.
+ * It allows authorized city officials to review reported issues, manage users,
+ * export data, and progress issue statuses.
+ * 
+ * Key Features Documented:
+ * - Privilege Separation / Role-Based Security (Admin-only data fetching and rendering)
+ * - Automated Status Progression (Filters out Unverified issues until threshold met)
+ */
+
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Loader2, AlertTriangle, MapPin, Play, CheckCircle2, Download, Users, Shield, ShieldOff } from 'lucide-react';
@@ -287,7 +299,12 @@ export const AdminDashboard: React.FC = () => {
         </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {currentIssues.map((issue: Issue) => {
+        {/* ========================================== */}
+        {/* Automated Status Progression Constraint */}
+        {/* ========================================== */}
+        {/* Admins are shielded from spam. The frontend hides 'Unverified' issues.
+            They only appear here once the Sybil-protected backend upvote threshold is met. */}
+        {currentIssues.filter((issue: Issue) => issue.status !== 'Unverified').map((issue: Issue) => {
           const next = getNextStatus(issue.status);
           const NextIcon = next?.Icon;
           

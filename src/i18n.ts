@@ -1,3 +1,8 @@
+/**
+ * File Purpose: Frontend Internationalization Config
+ * 
+ * Sets up i18next for multi-language support (English, Hindi, Gujarati).
+ */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 

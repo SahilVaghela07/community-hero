@@ -1,4 +1,5 @@
 {
+  "_comment": "File Purpose: TypeScript Compiler Configuration - Defines strict typing rules and module resolution strategies for the frontend build.",
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,

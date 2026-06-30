@@ -1,3 +1,13 @@
+/**
+ * File Purpose: Frontend View - Report Issue form for citizens.
+ * 
+ * This component allows users to submit civic issues with photo uploads, AI categorization,
+ * and automated GPS location capture.
+ * 
+ * Key Features Documented:
+ * - API-First Dynamic Reverse Geocoding (Frontend handles UI rendering of location, backend dictates actual Zone).
+ */
+
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../auth/AuthContext';
@@ -67,7 +77,12 @@ export const ReportIssue: React.FC = () => {
           setLocationStatus('Detecting city...');
           
           try {
-            // Reverse geocode to extract city
+            // ==========================================
+            // API-First Dynamic Reverse Geocoding
+            // ==========================================
+            // We use Nominatim purely for providing immediate visual feedback to the user 
+            // (e.g. "Location Captured (Vadodara)"). The backend does not trust this value
+            // and recalculates it securely upon submission.
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`);
             const data = await res.json();
             const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county;
@@ -191,7 +206,11 @@ export const ReportIssue: React.FC = () => {
       });
 
       if (response.data.success) {
-        setSuccess('Issue reported successfully!');
+        if (response.data.zoneAssigned === 'Unassigned') {
+          setSuccess('Issue reported! (Location unassigned - Admin will verify manually)');
+        } else {
+          setSuccess(`Issue reported successfully in ${response.data.zoneAssigned}!`);
+        }
         setFile(null);
         setPreviewUrl(null);
         setDescription('');

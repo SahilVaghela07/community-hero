@@ -1,3 +1,9 @@
+/**
+ * File Purpose: Frontend Build Configuration
+ * 
+ * Configures the Vite development server and build process, including
+ * React plugins, Tailwind CSS processing, and development environment overrides.
+ */
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';

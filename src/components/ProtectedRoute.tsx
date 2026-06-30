@@ -1,3 +1,12 @@
+/**
+ * File Purpose: Frontend Routing Component
+ * 
+ * A wrapper component that enforces authentication and role-based access 
+ * control on specific client-side routes.
+ * 
+ * Key Features Documented:
+ * - Privilege Separation / Role-Based Security (Restricts routes based on allowedRoles)
+ */
 import React from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
